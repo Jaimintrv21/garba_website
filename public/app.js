@@ -41,14 +41,12 @@ async function initFirebase() {
   }
 
   if (!cfg || !cfg.apiKey || cfg.apiKey === 'YOUR_API_KEY') {
-    console.warn('[Firebase] Not configured — likes/presence disabled');
     return;
   }
 
   try {
     firebase.initializeApp(cfg);
     db = firebase.database();
-    console.log('[Firebase] ✓ Initialized successfully. db:', !!db);
 
     const likeBtn = document.getElementById('like-btn');
     if (likeBtn) {
@@ -61,7 +59,6 @@ async function initFirebase() {
         if (user) {
           firebaseUid = user.uid;
           firebaseReady = true;
-          console.log('[Firebase] ✓ User auth ready. uid:', firebaseUid);
 
           if (likeBtn) {
             likeBtn.disabled = false;
@@ -76,16 +73,13 @@ async function initFirebase() {
         }
       });
 
-      console.log('[Firebase] Requesting anonymous sign-in...');
       firebase.auth().signInAnonymously()
-        .then(() => console.log('[Firebase] signInAnonymously request sent'))
+        .then(() => {})
         .catch(e => {
-          console.error('[Firebase] Anonymous sign-in FAILED:', e);
           resolve();
         });
     });
   } catch (e) {
-    console.error('[Firebase] Initialization FAILED:', e);
   }
 }
 
@@ -116,6 +110,7 @@ async function buildSessionPlaylist(rawList) {
     try {
       const snap = await db.ref('/likeCounts').once('value');
       _likeCounts = snap.val() || {};
+      scheduleLiveCounts = { ..._likeCounts };
     } catch (e) { _likeCounts = {}; }
   }
   return [...rawList].sort((a, b) => {
@@ -132,13 +127,11 @@ function playTrack(index) {
   currentIndex = index;
   const track  = sessionPlaylist[index];
 
-  console.log('[Audio] Loading local song file:', track.title, '| URL:', track.url);
-
   audio.src = track.url;
   audio.load();
 
   if (hasStarted) {
-    audio.play().catch(e => console.warn('[Audio] Playback interrupted:', e));
+    audio.play().catch(e => {});
   }
 
   updateNowPlayingUI(track, index);
@@ -206,7 +199,7 @@ function attachTrackFirebaseListeners(trackId) {
   if (!likeBtn || !likeCount) return;
 
   likeBtn.classList.remove('liked');
-  likeCount.textContent = _likeCounts[trackId] || 0;
+  likeCount.textContent = scheduleLiveCounts[trackId] || _likeCounts[trackId] || 0;
 
   if (!firebaseReady || !db || !firebaseUid) {
     likeBtn.style.opacity = '0.5';
@@ -226,21 +219,16 @@ function attachTrackFirebaseListeners(trackId) {
   const onLikesChange = likesRef.on('value', snap => {
     const totalLikes = snap.numChildren();
     _likeCounts[trackId] = totalLikes;
+    scheduleLiveCounts[trackId] = totalLikes;
     likeCount.textContent = totalLikes;
     db.ref(`/likeCounts/${trackId}`).set(totalLikes);
+    renderSchedule();
   });
   likeCountUnsub = () => likesRef.off('value', onLikesChange);
 }
 
 async function toggleLike() {
-  console.log('[Like Button] toggleLike called', {
-    dbReady: !!db,
-    firebaseReady: firebaseReady,
-    firebaseUid: firebaseUid
-  });
-
   if (!firebaseReady || !firebaseUid || !db) {
-    console.warn('[Firebase] Like ignored: Auth or database not ready');
     return;
   }
 
@@ -292,7 +280,9 @@ function attachScheduleFirebaseListener() {
   const ref = db.ref('/likeCounts');
   scheduleCountUnsub = () => ref.off();
   ref.on('value', snap => {
-    scheduleLiveCounts = snap.val() || {};
+    const counts = snap.val() || {};
+    scheduleLiveCounts = { ...counts };
+    _likeCounts = { ...counts };
     renderSchedule();
   });
 }
@@ -302,14 +292,16 @@ function renderSchedule() {
   if (!container || !sessionPlaylist.length) return;
 
   const display = [...sessionPlaylist].sort((a, b) => {
-    const diff = (scheduleLiveCounts[b.id] || 0) - (scheduleLiveCounts[a.id] || 0);
+    const countA = scheduleLiveCounts[a.id] ?? _likeCounts[a.id] ?? 0;
+    const countB = scheduleLiveCounts[b.id] ?? _likeCounts[b.id] ?? 0;
+    const diff = countB - countA;
     return diff !== 0 ? diff : a.id - b.id;
   });
 
   container.innerHTML = '';
   display.forEach((t, rank) => {
     const isCurrent = sessionPlaylist[currentIndex]?.id === t.id;
-    const likes = scheduleLiveCounts[t.id] || 0;
+    const likes = scheduleLiveCounts[t.id] ?? _likeCounts[t.id] ?? 0;
     const isTop = rank === 0 && likes > 0;
     const idx   = sessionPlaylist.findIndex(s => s.id === t.id);
 
@@ -480,13 +472,42 @@ function wireControls() {
     });
   });
 
-  // Keyboard shortcuts
-  document.addEventListener('keydown', e => {
-    if (['INPUT','TEXTAREA','SELECT'].includes(document.activeElement.tagName)) return;
-    if (e.code === 'Space')      { e.preventDefault(); togglePlayPause(); }
-    if (e.code === 'ArrowRight') { e.preventDefault(); playNextTrack(); }
-    if (e.code === 'ArrowLeft')  { e.preventDefault(); playPrevTrack(); }
-    if (e.code === 'KeyM')       { e.preventDefault(); audio.muted = !audio.muted; }
+  // Active Section Navigation Scroll Observer
+  const navLinks = document.querySelectorAll('.nav-link');
+  const sections = document.querySelectorAll('section[id], header[id], div[id="hero"]');
+  
+  function setActiveNav() {
+    let current = 'hero';
+    const scrollY = window.scrollY;
+    
+    sections.forEach(sec => {
+      const sectionTop = sec.offsetTop - 150;
+      const sectionHeight = sec.offsetHeight;
+      if (scrollY >= sectionTop && scrollY < sectionTop + sectionHeight) {
+        current = sec.getAttribute('id');
+      }
+    });
+
+    if ((window.innerHeight + scrollY) >= document.body.offsetHeight - 50) {
+      current = 'faqs';
+    }
+
+    navLinks.forEach(link => {
+      link.classList.remove('active');
+      if (link.getAttribute('href') === `#${current}` || (current === 'hero' && link.getAttribute('href') === '#hero')) {
+        link.classList.add('active');
+      }
+    });
+  }
+
+  window.addEventListener('scroll', setActiveNav, { passive: true });
+  setActiveNav();
+
+  navLinks.forEach(link => {
+    link.addEventListener('click', function() {
+      navLinks.forEach(l => l.classList.remove('active'));
+      this.classList.add('active');
+    });
   });
 }
 
