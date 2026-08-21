@@ -168,18 +168,15 @@ function attachTrackFirebaseListeners(trackId) {
   const onMyLike  = myLikeRef.on('value', snap => likeBtn.classList.toggle('liked', snap.exists()));
   likeUnsub = () => myLikeRef.off('value', onMyLike);
 
-  // Total count from /likeCounts/{trackId} and fallback to /likes/{trackId}
-  const countRef = db.ref(`/likeCounts/${trackId}`);
-  const onCountChange = countRef.on('value', snap => {
-    if (snap.exists()) {
-      likeCount.textContent = snap.val();
-    } else {
-      db.ref(`/likes/${trackId}`).once('value', lSnap => {
-        likeCount.textContent = lSnap.numChildren();
-      });
-    }
+  // Directly count child entries under /likes/{trackId}
+  const likesRef = db.ref(`/likes/${trackId}`);
+  const onLikesChange = likesRef.on('value', snap => {
+    const totalLikes = snap.numChildren();
+    likeCount.textContent = totalLikes;
+    // Also sync likeCounts node so schedule view gets live updates
+    db.ref(`/likeCounts/${trackId}`).set(totalLikes);
   });
-  likeCountUnsub = () => countRef.off('value', onCountChange);
+  likeCountUnsub = () => likesRef.off('value', onLikesChange);
 }
 
 async function toggleLike() {
@@ -187,17 +184,14 @@ async function toggleLike() {
     console.warn('[Firebase] Cannot toggle like: Firebase is not ready or user is not logged in');
     return;
   }
-  const trackId  = sessionPlaylist[currentIndex].id;
-  const myRef    = db.ref(`/likes/${trackId}/${firebaseUid}`);
-  const countRef = db.ref(`/likeCounts/${trackId}`);
-  const snap     = await myRef.once('value');
+  const trackId = sessionPlaylist[currentIndex].id;
+  const myRef   = db.ref(`/likes/${trackId}/${firebaseUid}`);
+  const snap    = await myRef.once('value');
   
   if (snap.exists()) {
     await myRef.remove();
-    await countRef.transaction(n => Math.max(0, (n || 1) - 1));
   } else {
     await myRef.set(true);
-    await countRef.transaction(n => (n || 0) + 1);
   }
 }
 
