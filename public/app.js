@@ -48,22 +48,30 @@ async function initFirebase() {
   try {
     firebase.initializeApp(cfg);
     db = firebase.database();
+    console.log('[Firebase] ✓ Initialized successfully. db:', !!db);
+
+    const likeBtn = document.getElementById('like-btn');
+    if (likeBtn) {
+      likeBtn.disabled = true;
+      likeBtn.style.opacity = '0.5';
+    }
 
     return new Promise((resolve) => {
       firebase.auth().onAuthStateChanged(async (user) => {
         if (user) {
           firebaseUid = user.uid;
           firebaseReady = true;
-          console.log('[Firebase] ✓ uid:', firebaseUid);
-          
-          const likeBtn = document.getElementById('like-btn');
-          if (likeBtn) likeBtn.style.opacity = '1';
+          console.log('[Firebase] ✓ User auth ready. uid:', firebaseUid);
+
+          if (likeBtn) {
+            likeBtn.disabled = false;
+            likeBtn.style.opacity = '1';
+          }
 
           setupPresence();
           attachScheduleFirebaseListener();
-          if (currentIndex >= 0 && sessionPlaylist[currentIndex]) {
-            attachTrackFirebaseListeners(sessionPlaylist[currentIndex].id);
-          }
+          const activeTrackId = currentTrackId || (sessionPlaylist[currentIndex]?.id) || 1;
+          attachTrackFirebaseListeners(activeTrackId);
           resolve();
         }
       });
@@ -74,7 +82,7 @@ async function initFirebase() {
       });
     });
   } catch (e) {
-    console.warn('[Firebase] Init failed:', e.message);
+    console.error('[Firebase] Initialization FAILED:', e);
   }
 }
 
@@ -221,8 +229,14 @@ function attachTrackFirebaseListeners(trackId) {
 }
 
 async function toggleLike() {
+  console.log('[Like Button] toggleLike called', {
+    dbReady: !!db,
+    firebaseReady: firebaseReady,
+    firebaseUid: firebaseUid
+  });
+
   if (!firebaseReady || !firebaseUid || !db) {
-    console.warn('[Firebase] Cannot toggle like: Firebase auth not ready');
+    console.warn('[Firebase] Like ignored: Auth or database not ready');
     return;
   }
 
@@ -316,11 +330,18 @@ function updateNowPlayingUI(track, index) {
   const titleEl  = document.getElementById('track-title');
   const artistEl = document.getElementById('track-artist');
   const nextEl   = document.getElementById('next-up-name');
+
   if (titleEl)  titleEl.innerText  = track.title;
   if (artistEl) artistEl.innerText = track.artist;
+
   const nextIndex = (index + 1) % sessionPlaylist.length;
-  const next = sessionPlaylist[nextIndex];
-  if (nextEl) nextEl.innerText = next ? `${next.title} — ${next.artist}` : 'End of queue';
+  const nextTrack = sessionPlaylist[nextIndex];
+
+  if (nextEl && nextTrack) {
+    nextEl.innerText = `${nextTrack.title} — ${nextTrack.artist}`;
+  } else if (nextEl) {
+    nextEl.innerText = 'End of Playlist';
+  }
 }
 
 function updatePlayBtnUI() {
@@ -453,8 +474,6 @@ function wireControls() {
 document.addEventListener('DOMContentLoaded', async () => {
   wireControls();
 
-  await initFirebase();
-
   let rawPlaylist = [];
   try {
     rawPlaylist = await fetch('/api/playlist').then(r => r.json());
@@ -462,9 +481,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   sessionPlaylist = await buildSessionPlaylist(rawPlaylist);
 
+  playTrack(0);
+
+  await initFirebase();
+
   attachScheduleFirebaseListener();
   renderSchedule();
 
-  playTrack(0);
   updateListenerCount(1);
 });
