@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Navratri Dhamaka — Real-Time Synced Garba Radio</title>
+  <meta name="description" content="Immerse in the live Navratri experience with our real-time synced Garba & Dandiya radio. Same beat, thousands of dancers, zero lag.">
+  <meta property="og:title" content="Navratri Dhamaka — Live Synced Garba Radio">
+  <meta property="og:description" content="Feel the festive vibes together! Join the live synced Navratri radio.">
+  <meta property="og:image" content="/images/night.jpg">
+  <meta property="twitter:card" content="summary_large_image">
+  
+  <!-- Premium Fonts: Rozha One & Plus Jakarta Sans -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Rozha+One&display=swap" rel="stylesheet">
+  
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+
+  <!-- ── Fixed Floating Top Glass Bar (Fixed Sidebar / Header) ── -->
+  <header id="site-header" class="site-header">
+    <div class="header-container">
+      
+      <!-- Brand Logo -->
+      <a href="/" class="brand-logo" title="Navratri Dhamaka">
+        <div class="logo-icon-wrap">
+          <svg viewBox="0 0 40 40" fill="none">
+            <path d="M20 36C11 36 6 28 6 21C6 13 13 5 20 2C27 5 34 13 34 21C34 28 29 36 20 36Z" fill="var(--gold-accent)" opacity="0.95"/>
+            <path d="M20 28C16 28 13 24 13 21C13 17 16 13 20 10C24 13 27 17 27 21C27 24 24 28 20 28Z" fill="var(--marigold-accent)" opacity="0.9"/>
+          </svg>
+        </div>
+        <span class="brand-text">NAVRATRI <span>DHAMAKA</span></span>
+      </a>
+
+      <!-- Desktop Navigation -->
+      <nav class="main-nav">
+        <a href="#home" class="nav-link active" data-section="home">
+          <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+          <span>Home</span>
+        </a>
+        <a href="#about" class="nav-link" data-section="about">
+          <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
+          <span>About</span>
+        </a>
+        <a href="#features" class="nav-link" data-section="features">
+          <svg viewBox="0 0 24 24"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg>
+          <span>Features</span>
+        </a>
+        <a href="#playlist" class="nav-link" data-section="playlist">
+          <svg viewBox="0 0 24 24"><path d="M4 6h16v2H4zm0 5h16v2H4zm0 5h11v2H4z"/></svg>
+          <span>Schedule</span>
+        </a>
+        <a href="#faqs" class="nav-link" data-section="faqs">
+          <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 16h-2v-2h2v2zm1.07-7.75l-.9.92C12.45 11.9 12 12.5 12 14h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H7c0-2.76 2.24-5 5-5s5 2.24 5 5c0 1.04-.42 1.99-1.07 2.75z"/></svg>
+          <span>FAQ</span>
+        </a>
+        <a href="https://github.com/Jaimintrv21" target="_blank" rel="noopener noreferrer" class="nav-link github-nav-link" title="GitHub Profile">
+          <svg viewBox="0 0 24 24"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+          <span>GitHub</span>
+        </a>
+      </nav>
+
+      <!-- Action Controls (Day/Night Theme Toggle) -->
+      <div class="header-actions">
+        <button id="theme-toggle-btn" class="theme-toggle-btn" aria-label="Toggle Day or Night Mode" title="Switch Day/Night Theme">
+          <span class="theme-icon" id="theme-toggle-icon"></span>
+          <span class="theme-text" id="theme-toggle-label">Night Mode</span>
+        </button>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- ── 100vh Living Hero with Day/Night Background ── -->
+  <section class="hero-wrap" id="home">
+
+    <!-- Smooth Crossfading Backgrounds -->
+    <div class="hero-bg hero-bg-day" id="hero-bg-day"></div>
+    <div class="hero-bg hero-bg-night" id="hero-bg-night"></div>
+    <div class="hero-overlay"></div>
+
+    <!-- Decorative Festive String Lights -->
+    <div class="string-lights"></div>
+
+    <!-- Animated Marigold Petals -->
+    <div class="marigold-petals" id="marigold-petals"></div>
+
+    <!-- Hero Content Container -->
+    <div class="hero-content">
+      
+      <!-- Minimal Bold Typography Branding -->
+      <div class="hero-branding">
+        <div class="hero-eyebrow">
+          <span class="live-dot"></span>
+          <span id="listeners-count">0 dancing right now</span>
+        </div>
+        <h1 class="hero-title">NAVRATRI <span class="accent">DHAMAKA</span></h1>
+        <p class="hero-tagline">Real-Time Synced Ambient Garba Radio</p>
+      </div>
+
+      <!-- Refined Music Player Card (Reference Image Layout) -->
+      <div class="festive-player-card-wrap">
+        <div class="festive-card-glow-backdrop"></div>
+        <div class="festive-player-card" id="player-bar">
+          
+          <!-- Card Decorative Border Accent -->
+          <div class="card-border-frame"></div>
+
+          <!-- TOP ROW: Live Badge, Artist & Title -->
+          <div class="player-top-row">
+            <div class="player-track-meta">
+              <div class="artist-live-wrap">
+                <div class="live-pill-badge">
+                  <span class="live-dot-pulse"></span>
+                  <span class="badge-text">LIVE SYNC</span>
+                </div>
+                <div class="track-artist-top" id="track-artist">Artist</div>
+              </div>
+              <h2 class="track-title-heading" id="track-title">Song Title</h2>
+            </div>
+          </div>
+
+          <!-- MIDDLE SECTION: Progress Bar with Current Time & Remaining Time -->
+          <div class="player-progress-unit" id="player-progress-wrap">
+            <div class="progress-track-bg">
+              <div class="progress-track-fill" id="progress-fill-bar"></div>
+            </div>
+            <div class="progress-time-row">
+              <span id="time-current">0:00</span>
+              <span id="time-remaining">-0:00</span>
+            </div>
+          </div>
+
+          <!-- CENTER CONTROLS: Shuffle, Prev, Big Circle Play, Next, Repeat -->
+          <div class="player-controls-cluster">
+            <button class="control-btn-icon" id="btn-shuffle" title="Shuffle Mode">
+              <svg viewBox="0 0 24 24"><path d="M10.59 9.17L5.41 4 4 5.41l5.17 5.17 1.42-1.41zM14.5 4l2.04 2.04L4 18.59 5.41 20 17.96 7.45 20 9.5V4h-5.5zm.33 9.41l-1.41 1.41 3.13 3.13L14.5 20H20v-5.5l-2.04 2.04-3.13-3.13z"/></svg>
+            </button>
+
+            <button class="control-btn-icon transport-prev" id="btn-prev" title="Previous Song">
+              <svg viewBox="0 0 24 24"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>
+            </button>
+
+            <button class="main-play-circle" id="play-btn" aria-label="Play / Pause">
+              <svg viewBox="0 0 24 24" id="play-icon"><path d="M8 5v14l11-7z"/></svg>
+            </button>
+
+            <button class="control-btn-icon transport-next" id="btn-next" title="Next Song">
+              <svg viewBox="0 0 24 24"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>
+            </button>
+
+            <button class="control-btn-icon" id="btn-repeat" title="Repeat Mode">
+              <svg viewBox="0 0 24 24"><path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z"/></svg>
+            </button>
+          </div>
+
+          <!-- BOTTOM CARD: Compact Next Song Mini-Pill -->
+          <div class="next-track-mini-card" id="next-track-card">
+            <div class="mini-card-icon">
+              <svg viewBox="0 0 24 24"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg>
+            </div>
+            <div class="mini-card-meta">
+              <div class="mini-card-artist" id="next-card-artist">Next Up</div>
+              <div class="mini-card-title" id="next-up-name">Loading schedule…</div>
+            </div>
+            <button class="mini-play-arrow" id="btn-next-mini" title="Play Next">
+              <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+            </button>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Scroll Indicator -->
+    <div class="hero-scroll-hint">
+      <span>Scroll Down</span>
+      <svg viewBox="0 0 24 24"><path d="M7 10l5 5 5-5z"/></svg>
+    </div>
+
+  </section>
+
+  <!-- ── About Section (Updated for 40-Song Version) ──────────────────────── -->
+  <section class="section" id="about">
+    <div class="section-inner">
+      <div class="about-grid">
+        <div class="about-content">
+          <div class="section-label">About the Stream</div>
+          <h2 class="section-title">Navratri Dhamaka 2.0 — 40 Track Live Sync</h2>
+          <p class="section-body">
+            Experience the ultimate Navratri Garba celebration with our brand new 40-song canonical radio broadcast! Every listener across the world is connected in real-time, hearing the exact same beat, traditional Sanedo rhythm, and holy Aartis simultaneously.
+          </p>
+          <p class="section-body" style="margin-top:1rem;">
+            Powered by low-latency server streaming, you can jump to any track, skip forward/rewind, or dance along uninterrupted. 100% free, community-driven, ad-free.
+          </p>
+        </div>
+        <div class="mandala-wrap">
+          <svg class="mandala-art" viewBox="0 0 100 100">
+            <circle cx="50" cy="50" r="46" stroke-width="0.8"/>
+            <circle cx="50" cy="50" r="36" stroke-width="0.5" stroke-dasharray="2,3"/>
+            <circle cx="50" cy="50" r="24" stroke-width="0.8"/>
+            <circle cx="50" cy="50" r="10" stroke-width="1.2"/>
+            <path d="M50 4 L50 96 M4 50 L96 50 M19 19 L81 81 M19 81 L81 19" stroke-width="0.4"/>
+            <path d="M50 14 L54 40 L50 50 L46 40 Z" stroke-width="0.4" fill="none"/>
+            <path d="M86 50 L60 54 L50 50 L60 46 Z" stroke-width="0.4" fill="none"/>
+            <path d="M50 86 L46 60 L50 50 L54 60 Z" stroke-width="0.4" fill="none"/>
+            <path d="M14 50 L40 46 L50 50 L40 54 Z" stroke-width="0.4" fill="none"/>
+          </svg>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Features Section (Updated Version Features) ───────────────────── -->
+  <section class="section alt" id="features">
+    <div class="section-inner">
+      <div class="section-label">Platform Features</div>
+      <h2 class="section-title">Next-Gen Garba Radio Experience</h2>
+      <div class="features-grid">
+
+        <div class="feature-card">
+          <div class="feature-icon">
+            <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
+          </div>
+          <h3>40 Full MP3 Track Queue</h3>
+          <p>Complete curated collection including Jay Adhya Shakti, Osman Mir, Falguni Pathak hits, Rahul Munjariya mixes, and traditional Raas Garba.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon">
+            <svg viewBox="0 0 24 24"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg>
+          </div>
+          <h3>Instant Track Controls</h3>
+          <p>Click Next/Previous or pick any track from the interactive 40-song schedule table to immediately broadcast it live for all connected dancers.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon">
+            <svg viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
+          </div>
+          <h3>Live Global Sync & Presence</h3>
+          <p>Automatic background SSE clock synchronization ensures zero drift between mobile and desktop devices anywhere in the world.</p>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="playlist">
+    <div class="section-inner">
+      <div class="section-label">Live Broadcast Schedule</div>
+      <h2 class="section-title">40-Track Master Garba Playlist</h2>
+      <div class="playlist-box">
+        <div id="playlist-items">
+          <!-- Dynamically populated by JS -->
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── FAQ Section ────────────────────────── -->
+  <section class="section alt" id="faqs">
+    <div class="section-inner">
+      <div class="section-label">FAQ</div>
+      <h2 class="section-title">Common Questions</h2>
+      <div class="faq-container">
+        <div class="faq-item">
+          <div class="faq-question">
+            <span>How does server-synced audio work?</span>
+            <svg class="faq-icon" viewBox="0 0 24 24"><path d="M7 10l5 5 5-5z"/></svg>
+          </div>
+          <div class="faq-answer">Our server manages a master timeline. Your browser syncs its cursor to the server's exact global timestamp — you hear the same second as every other dancer.</div>
+        </div>
+        <div class="faq-item">
+          <div class="faq-question">
+            <span>Can I pause the music?</span>
+            <svg class="faq-icon" viewBox="0 0 24 24"><path d="M7 10l5 5 5-5z"/></svg>
+          </div>
+          <div class="faq-answer">Pausing mutes your browser only. The broadcast continues. Clicking play again re-syncs you to the current server position automatically.</div>
+        </div>
+        <div class="faq-item">
+          <div class="faq-question">
+            <span>How does Day &amp; Night mode switch?</span>
+            <svg class="faq-icon" viewBox="0 0 24 24"><path d="M7 10l5 5 5-5z"/></svg>
+          </div>
+          <div class="faq-answer">It automatically detects your local clock time (Day between 6:00 AM – 6:30 PM, Night between 6:30 PM – 6:00 AM) and smoothly crossfades between day.jpg and night.jpg. You can also toggle manually via the top button!</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Footer ─────────────────────────────── -->
+  <footer>
+    <div class="footer-inner">
+      <div class="footer-info">
+        <p>&copy; 2026 Navratri Dhamaka. Handcrafted for the Global Garba Family.</p>
+        <p class="footer-contact">Created by <a href="https://github.com/Jaimintrv21" target="_blank" rel="noopener noreferrer" style="color:var(--gold-accent);font-weight:700;">Jaimintrv21</a> | <a href="https://github.com/Jaimintrv21" target="_blank" rel="noopener noreferrer">GitHub Profile</a></p>
+      </div>
+    </div>
+  </footer>
+
+  <script src="/app.js"></script>
+</body>
+</html>

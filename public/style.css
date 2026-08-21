@@ -1,0 +1,524 @@
+/* -----------------------------------------------
+   NAVRATRI DHAMAKA — Mobile-First Responsive CSS
+   Samsung One UI Liquid Glassmorphism & Festive Palette
+   ----------------------------------------------- */
+
+@import url('https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400..700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=Rozha+One&display=swap');
+
+/* ── Design Tokens & Responsive Variables ──── */
+:root {
+  --font-brand: 'Pixelify Sans', cursive, sans-serif;
+  --font-display: 'Pixelify Sans', cursive, sans-serif;
+  --font-ui: 'Plus Jakarta Sans', system-ui, sans-serif;
+
+  --ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --theme-speed: 0.5s;
+
+  /* Safe Area Insets */
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+}
+
+/* ── Night / Dark Festive Theme ── */
+body, body[data-theme="night"] {
+  --bg: #090206;
+  --section-bg: #11050D;
+  --section-alt: #0D0309;
+  
+  --glass-bg: linear-gradient(135deg, rgba(32, 12, 24, 0.78) 0%, rgba(18, 6, 14, 0.88) 100%);
+  --glass-border: rgba(255, 200, 55, 0.3);
+  
+  --gold-accent: #FFC837;
+  --marigold-accent: #FF8008;
+  --crimson-accent: #E73859;
+
+  --text-main: #FFFFFF;
+  --text-sub: rgba(255, 255, 255, 0.85);
+  --text-muted: rgba(255, 255, 255, 0.55);
+
+  --hero-overlay: linear-gradient(180deg, rgba(9,2,6,0.3) 0%, rgba(9,2,6,0.65) 60%, rgba(9,2,6,0.98) 100%);
+}
+
+/* ── Day Festive Theme ───────── */
+body[data-theme="day"] {
+  --bg: #1D0D07;
+  --section-bg: #25120B;
+  --section-alt: #1E0E08;
+
+  --glass-bg: linear-gradient(135deg, rgba(48, 22, 14, 0.78) 0%, rgba(28, 12, 8, 0.88) 100%);
+  --glass-border: rgba(255, 180, 40, 0.3);
+
+  --gold-accent: #FFB300;
+  --marigold-accent: #F57C00;
+  --crimson-accent: #D32F2F;
+
+  --text-main: #FFFDF9;
+  --text-sub: rgba(255, 253, 249, 0.88);
+  --text-muted: rgba(255, 253, 249, 0.55);
+
+  --hero-overlay: linear-gradient(180deg, rgba(29,13,7,0.25) 0%, rgba(29,13,7,0.65) 60%, rgba(29,13,7,0.98) 100%);
+}
+
+/* ── Base Reset & Global Rules ──────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0; padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html {
+  scroll-behavior: smooth;
+  font-size: 16px;
+  overflow-x: hidden;
+}
+
+body {
+  font-family: var(--font-ui);
+  background: var(--bg);
+  color: var(--text-main);
+  line-height: 1.5;
+  overflow-x: hidden;
+  width: 100%;
+  -webkit-font-smoothing: antialiased;
+  transition: background var(--theme-speed) var(--ease), color var(--theme-speed) var(--ease);
+}
+
+/* ── Samsung One UI Floating Glass Header Navigation ───────── */
+.site-header {
+  position: fixed;
+  top: calc(0.75rem + var(--safe-top));
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(1000px, calc(100% - 1.5rem));
+  z-index: 250;
+}
+
+.header-container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.45rem 0.85rem;
+  border-radius: 100px;
+  background: var(--glass-bg);
+  backdrop-filter: blur(40px) saturate(210%) brightness(110%);
+  -webkit-backdrop-filter: blur(40px) saturate(210%) brightness(110%);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-top: 1px solid rgba(255, 255, 255, 0.4);
+  box-shadow: inset 0 1.5px 2px rgba(255, 255, 255, 0.3), inset 0 -1.5px 2px rgba(0, 0, 0, 0.35), 0 12px 32px rgba(0, 0, 0, 0.6);
+}
+
+.brand-logo {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  text-decoration: none;
+  flex-shrink: 0;
+}
+
+.logo-icon-wrap { width: 28px; height: 28px; flex-shrink: 0; }
+
+.brand-text {
+  font-family: var(--font-brand);
+  font-weight: 700;
+  font-size: 1.05rem;
+  letter-spacing: 0.02em;
+  color: var(--text-main);
+  display: inline-block;
+}
+
+.brand-text span {
+  background: linear-gradient(135deg, var(--gold-accent), var(--marigold-accent));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.main-nav {
+  display: flex;
+  align-items: center;
+  gap: 0.2rem;
+  overflow-x: auto;
+  white-space: nowrap;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+  max-width: calc(100vw - 180px);
+  padding: 0.1rem 0;
+}
+
+.main-nav::-webkit-scrollbar { display: none; }
+.main-nav { -ms-overflow-style: none; scrollbar-width: none; }
+
+.nav-link {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  color: var(--text-sub);
+  text-decoration: none;
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 0.38rem 0.65rem;
+  border-radius: 100px;
+  flex-shrink: 0;
+  transition: all 0.22s var(--ease);
+}
+
+.nav-link svg {
+  width: 14px; height: 14px; fill: currentColor; opacity: 0.85;
+}
+
+.nav-link:hover, .nav-link.active {
+  color: #090206;
+  background: linear-gradient(135deg, var(--gold-accent), var(--marigold-accent));
+  box-shadow: 0 4px 14px rgba(255, 160, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-shrink: 0;
+}
+
+.theme-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.4rem 0.75rem;
+  min-height: 34px;
+  border-radius: 100px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-main);
+  font-family: var(--font-ui);
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  backdrop-filter: blur(12px);
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.3);
+}
+
+@media (max-width: 600px) {
+  .brand-text { font-size: 0.88rem; }
+  .logo-icon-wrap { width: 22px; height: 22px; }
+  .nav-link { font-size: 0.72rem; padding: 0.3rem 0.5rem; }
+  .theme-toggle-btn { padding: 0.3rem 0.55rem; font-size: 0.7rem; }
+  .theme-text { display: none; }
+}
+
+@media (min-width: 769px) {
+  .main-nav { max-width: none; overflow-x: visible; gap: 0.35rem; }
+  .nav-link { font-size: 0.88rem; padding: 0.45rem 0.85rem; }
+  .header-container { padding: 0.6rem 1.4rem; }
+}
+
+/* ── 100vh Living Hero Section ─ */
+.hero-wrap {
+  position: relative;
+  width: 100%;
+  height: 100vh;
+  min-height: 580px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding-top: calc(2.2rem + var(--safe-top));
+  padding-bottom: var(--safe-bottom);
+}
+
+.hero-bg {
+  position: absolute; inset: -5% 0;
+  background-size: cover; background-position: center 25%;
+  transition: opacity 0.8s var(--ease);
+}
+
+.hero-bg-day { background-image: url('/images/day.jpg'); opacity: 0; }
+.hero-bg-night { background-image: url('/images/night.jpg'); opacity: 1; }
+
+body[data-theme="day"] .hero-bg-day { opacity: 1; }
+body[data-theme="day"] .hero-bg-night { opacity: 0; }
+
+.hero-overlay {
+  position: absolute; inset: 0;
+  background: var(--hero-overlay);
+}
+
+.hero-content {
+  position: relative; z-index: 10;
+  display: flex; flex-direction: column; align-items: center; gap: 0.4rem;
+  width: 100%; max-width: 520px; padding: 0 0.85rem;
+}
+
+.hero-branding { text-align: center; }
+
+.hero-eyebrow {
+  display: inline-flex; align-items: center; gap: 0.35rem;
+  padding: 0.25rem 0.75rem; border-radius: 100px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  backdrop-filter: blur(20px);
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.3);
+  font-size: clamp(0.7rem, 2.4vw, 0.78rem);
+  font-weight: 600; color: var(--text-main);
+  margin-bottom: 0.25rem;
+}
+
+.live-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--gold-accent); box-shadow: 0 0 8px var(--gold-accent);
+  animation: electricPulse 0.7s cubic-bezier(0.4, 0, 0.6, 1) infinite alternate;
+}
+
+@keyframes electricPulse {
+  0% { transform: scale(0.8); opacity: 0.5; box-shadow: 0 0 4px #FFC837; }
+  100% { transform: scale(1.5); opacity: 1; box-shadow: 0 0 14px #FFC837, 0 0 24px #FF8008; }
+}
+
+.hero-title {
+  font-family: 'Pixelify Sans', cursive, sans-serif;
+  font-size: clamp(2.2rem, 7.5vw, 4.2rem);
+  font-weight: 700;
+  line-height: 1.02;
+  color: var(--text-main);
+  letter-spacing: 0.02em;
+  text-shadow: 0 0 20px rgba(255, 160, 0, 0.4), 0 8px 30px rgba(0, 0, 0, 0.8);
+}
+
+.hero-title .accent {
+  background: linear-gradient(135deg, var(--gold-accent) 0%, var(--marigold-accent) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.hero-tagline {
+  font-size: clamp(0.68rem, 2.4vw, 0.78rem);
+  font-weight: 600; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--text-sub); margin-top: 0.1rem;
+}
+
+/* ═══════════════════════════════════════════════
+   SAMSUNG ONE UI LIQUID GLASS PLAYER CARD
+   Frosted Acrylic Sheen & Multi-Layered Depth
+   ═══════════════════════════════════════════════ */
+.festive-player-card-wrap {
+  position: relative;
+  width: min(440px, 100%);
+  margin: 0 auto;
+  display: flex;
+  justify-content: center;
+}
+
+.festive-card-glow-backdrop {
+  position: absolute; inset: -12px; border-radius: 32px;
+  background: radial-gradient(circle at 50% 50%, rgba(255, 160, 0, 0.4) 0%, rgba(231, 56, 89, 0.2) 60%, transparent 85%);
+  filter: blur(24px); pointer-events: none; z-index: 1;
+}
+
+.festive-player-card {
+  position: relative; z-index: 2;
+  width: 100%;
+  padding: clamp(16px, 4vw, 22px);
+  border-radius: 28px; /* Samsung One UI Smooth Liquid Corner */
+  background: linear-gradient(135deg, rgba(36, 14, 28, 0.78) 0%, rgba(18, 6, 14, 0.9) 100%);
+  backdrop-filter: blur(48px) saturate(220%) brightness(110%);
+  -webkit-backdrop-filter: blur(48px) saturate(220%) brightness(110%);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-top: 1px solid rgba(255, 255, 255, 0.45);
+  box-shadow: inset 0 1.5px 2px rgba(255, 255, 255, 0.35), inset 0 -1.5px 2px rgba(0, 0, 0, 0.4), 0 24px 60px rgba(0, 0, 0, 0.88), 0 0 35px rgba(255, 180, 40, 0.15);
+  display: flex; flex-direction: column; gap: 14px;
+  transition: transform 0.3s var(--ease), box-shadow 0.3s var(--ease);
+}
+
+.card-border-frame {
+  position: absolute; inset: 4px; border-radius: 24px;
+  border: 1px dashed rgba(255, 200, 55, 0.25); pointer-events: none;
+}
+
+/* TOP ROW: Live Badge, Artist & Title */
+.player-top-row {
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 10px;
+}
+
+.player-track-meta { display: flex; flex-direction: column; min-width: 0; text-align: left; }
+
+.artist-live-wrap { display: flex; align-items: center; gap: 6px; margin-bottom: 2px; }
+
+.live-pill-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 2px 7px; border-radius: 100px;
+  background: rgba(255, 200, 55, 0.16);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  backdrop-filter: blur(12px);
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.3);
+  flex-shrink: 0;
+}
+.live-dot-pulse {
+  width: 5px; height: 5px; border-radius: 50%; background: #FFC837;
+  box-shadow: 0 0 6px #FFC837; animation: liveDot 1s infinite alternate;
+}
+@keyframes liveDot { 0% { opacity: 0.4; } 100% { opacity: 1; } }
+.badge-text { font-size: 0.6rem; font-weight: 900; letter-spacing: 0.08em; color: var(--gold-accent); }
+
+.track-artist-top {
+  font-size: 0.8rem; font-weight: 600; color: var(--text-sub);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+.player-track-meta .track-title-heading {
+  font-size: clamp(1.15rem, 3.8vw, 1.45rem);
+  font-weight: 900; color: #FFFFFF; letter-spacing: -0.01em;
+  line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+/* MIDDLE PROGRESS BAR: Samsung Glossy Fill */
+.player-progress-unit {
+  display: flex; flex-direction: column; gap: 6px; width: 100%; cursor: pointer;
+}
+
+.progress-track-bg {
+  position: relative; height: 5px; background: rgba(255, 255, 255, 0.15); border-radius: 100px; overflow: hidden;
+  box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.4);
+}
+
+.progress-track-fill {
+  position: absolute; top: 0; left: 0; height: 100%;
+  background: linear-gradient(90deg, var(--gold-accent) 0%, var(--marigold-accent) 100%);
+  border-radius: 100px; width: 0%; transition: width 0.1s linear;
+  box-shadow: 0 0 12px rgba(255, 200, 55, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+
+.progress-time-row {
+  display: flex; justify-content: space-between;
+  font-size: 0.72rem; font-weight: 800; color: var(--text-muted);
+}
+
+/* CENTER CONTROLS CLUSTER: 5-Icon Row (Shuffle, Prev, Samsung Diya Circle, Next, Repeat) */
+.player-controls-cluster {
+  display: flex; align-items: center; justify-content: space-between; width: 100%; padding: 2px 0;
+}
+
+.control-btn-icon {
+  background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.12); color: var(--text-sub); cursor: pointer;
+  padding: 8px; display: flex; align-items: center; justify-content: center;
+  border-radius: 50%; backdrop-filter: blur(12px); box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.2);
+  transition: all 0.2s var(--ease);
+}
+.control-btn-icon:hover { color: var(--gold-accent); border-color: rgba(255, 200, 55, 0.4); transform: scale(1.1); }
+.control-btn-icon.active { color: var(--gold-accent); background: rgba(255, 200, 55, 0.18); border-color: var(--gold-accent); }
+.control-btn-icon svg { width: 20px; height: 20px; fill: currentColor; }
+
+.transport-prev svg, .transport-next svg { width: 24px; height: 24px; }
+
+/* Samsung One UI Glossy Diya Play Circle */
+.main-play-circle {
+  position: relative;
+  width: 56px; height: 56px; border-radius: 50%;
+  background: linear-gradient(135deg, #FFC837 0%, #FF8008 60%, #E73859 100%);
+  color: #090206; border: 1px solid rgba(255, 255, 255, 0.4); cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: inset 0 1.5px 2px rgba(255, 255, 255, 0.5), 0 8px 24px rgba(255, 128, 8, 0.65), 0 0 30px rgba(231, 56, 89, 0.45);
+  transition: transform 0.22s var(--spring); flex-shrink: 0;
+}
+.main-play-circle:hover { transform: scale(1.08) rotate(3deg); }
+.main-play-circle:active { transform: scale(0.95) rotate(-4deg); }
+.main-play-circle svg { width: 22px; height: 22px; fill: currentColor; z-index: 2; }
+
+/* BOTTOM CARD: Samsung Frosted Mini-Pill */
+.next-track-mini-card {
+  display: flex; align-items: center; gap: 10px;
+  background: rgba(255, 255, 255, 0.07); border-radius: 16px; padding: 10px 14px;
+  margin-top: 2px; width: 100%; border: 1px solid rgba(255, 255, 255, 0.2);
+  border-top: 1px solid rgba(255, 255, 255, 0.35);
+  backdrop-filter: blur(20px); box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.25);
+}
+
+.mini-card-icon {
+  width: 34px; height: 34px; border-radius: 10px;
+  background: rgba(255, 200, 55, 0.16); display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; color: var(--gold-accent); border: 1px solid rgba(255, 200, 55, 0.3);
+}
+.mini-card-icon svg { width: 16px; height: 16px; fill: currentColor; }
+
+.mini-card-meta { display: flex; flex-direction: column; flex: 1; min-width: 0; text-align: left; }
+.mini-card-artist { font-size: 0.68rem; font-weight: 800; color: var(--marigold-accent); text-transform: uppercase; letter-spacing: 0.06em; }
+.mini-card-title { font-size: 0.82rem; font-weight: 600; color: var(--text-sub); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.mini-play-arrow {
+  background: none; border: none; color: var(--gold-accent); cursor: pointer;
+  padding: 4px; display: flex; align-items: center; justify-content: center; transition: color 0.2s ease, transform 0.2s ease;
+}
+.mini-play-arrow:hover { color: #FFFFFF; transform: scale(1.15); }
+.mini-play-arrow svg { width: 18px; height: 18px; fill: currentColor; }
+
+.hero-scroll-hint {
+  position: absolute; bottom: calc(0.8rem + var(--safe-bottom)); left: 50%;
+  transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 0.2rem;
+  font-size: 0.68rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.1em;
+  animation: scrollBob 2s infinite;
+}
+.hero-scroll-hint svg { width: 16px; height: 16px; fill: currentColor; }
+
+@keyframes scrollBob {
+  0%, 100% { transform: translateX(-50%) translateY(0); }
+  50% { transform: translateX(-50%) translateY(5px); }
+}
+
+/* ── Content Sections ─ */
+.section { padding: clamp(3.5rem, 8vw, 5rem) 1.25rem; background: var(--section-bg); }
+.section.alt { background: var(--section-alt); }
+.section-inner { max-width: 960px; margin: 0 auto; width: 100%; }
+
+.section-label { font-size: 0.72rem; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: var(--gold-accent); margin-bottom: 0.35rem; }
+.section-title { font-family: var(--font-display); font-size: clamp(1.75rem, 6vw, 2.7rem); font-weight: 400; color: var(--text-main); margin-bottom: 1rem; }
+.section-body { font-size: 0.95rem; color: var(--text-sub); line-height: 1.65; max-width: 620px; }
+
+/* About Grid */
+.about-grid { display: grid; grid-template-columns: 1fr; gap: 2rem; align-items: center; }
+@media (min-width: 769px) { .about-grid { grid-template-columns: 1fr 1fr; gap: 3rem; } }
+.mandala-art { width: min(240px, 80%); margin: 0 auto; opacity: 0.35; fill: none; stroke: var(--gold-accent); animation: rotateMandala 60s linear infinite; display: block; }
+@keyframes rotateMandala { to { transform: rotate(360deg); } }
+
+/* Features Grid */
+.features-grid { display: grid; grid-template-columns: 1fr; gap: 1rem; margin-top: 2rem; }
+@media (min-width: 600px) { .features-grid { grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); } }
+.feature-card { padding: 1.4rem; border-radius: 20px; border: 1px solid rgba(255, 255, 255, 0.2); background: var(--glass-bg); backdrop-filter: blur(24px); box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.25); }
+.feature-icon { width: 38px; height: 38px; border-radius: 10px; background: rgba(255, 200, 55, 0.14); display: flex; align-items: center; justify-content: center; margin-bottom: 0.85rem; }
+.feature-icon svg { width: 18px; height: 18px; fill: var(--gold-accent); }
+.feature-card h3 { font-size: 1rem; font-weight: 700; color: var(--text-main); margin-bottom: 0.35rem; }
+.feature-card p { font-size: 0.85rem; color: var(--text-sub); }
+
+/* Master Playlist Box */
+.playlist-box { max-width: 800px; margin: 1.75rem auto 0; border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 24px; overflow: hidden; background: var(--glass-bg); backdrop-filter: blur(32px); box-shadow: inset 0 1px 1.5px rgba(255, 255, 255, 0.3); }
+.playlist-item { display: flex; align-items: center; justify-content: space-between; padding: 0.85rem 1.2rem; border-bottom: 1px solid rgba(255, 255, 255, 0.08); }
+.playlist-item:last-child { border-bottom: none; }
+.playlist-item.active { background: rgba(255, 200, 55, 0.16); border-left: 4px solid var(--gold-accent); }
+.playlist-track-info { display: flex; align-items: center; gap: 0.75rem; min-width: 0; }
+.playlist-track-index { font-size: 0.78rem; font-weight: 700; color: var(--text-muted); width: 20px; }
+.playlist-track-title { font-size: 0.88rem; font-weight: 700; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.playlist-track-artist { font-size: 0.78rem; color: var(--text-sub); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.playlist-track-duration { font-size: 0.75rem; font-weight: 600; color: var(--text-muted); }
+
+/* FAQ Accordion */
+.faq-container { max-width: 750px; margin: 1.75rem auto 0; }
+.faq-item { border-bottom: 1px solid rgba(255, 255, 255, 0.12); }
+.faq-question {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 1rem 0; min-height: 48px; cursor: pointer;
+  font-size: 0.95rem; font-weight: 600; color: var(--text-main);
+  width: 100%; text-align: left;
+}
+.faq-question:hover { color: var(--gold-accent); }
+.faq-icon { width: 18px; height: 18px; fill: currentColor; transition: transform 0.3s; flex-shrink: 0; margin-left: 0.5rem; }
+.faq-item.active .faq-icon { transform: rotate(180deg); }
+.faq-answer { max-height: 0; overflow: hidden; transition: max-height 0.35s var(--ease), padding 0.35s; font-size: 0.88rem; color: var(--text-sub); line-height: 1.6; }
+.faq-item.active .faq-answer { max-height: 200px; padding-bottom: 1rem; }
+
+footer {
+  background: var(--bg); border-top: 1px solid rgba(255, 255, 255, 0.15);
+  padding: 2.5rem 1.25rem calc(2.5rem + var(--safe-bottom));
+  text-align: center; font-size: 0.82rem; color: var(--text-muted);
+}
+footer a { color: var(--gold-accent); text-decoration: none; }

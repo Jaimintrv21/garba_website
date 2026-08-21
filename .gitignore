@@ -1,0 +1,10 @@
+# Dependencies
+node_modules/
+package-lock.json
+
+# Local temp & scratch files
+*.py
+!.gitignore
+
+# Logs
+*.log
