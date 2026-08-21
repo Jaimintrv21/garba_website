@@ -50,18 +50,27 @@ async function initFirebase() {
   try {
     firebase.initializeApp(cfg);
     db = firebase.database();
-    
-    // Task 3: Wait for auth state before presence operations
-    firebase.auth().onAuthStateChanged((user) => {
-      if (user) {
-        firebaseUid = user.uid;
-        firebaseReady = true;
-        console.log('[Firebase] ✓ uid:', firebaseUid);
-        setupPresence();
-      }
-    });
 
-    await firebase.auth().signInAnonymously();
+    return new Promise((resolve) => {
+      firebase.auth().onAuthStateChanged(async (user) => {
+        if (user) {
+          firebaseUid = user.uid;
+          firebaseReady = true;
+          console.log('[Firebase] ✓ uid:', firebaseUid);
+          setupPresence();
+          attachScheduleFirebaseListener();
+          if (currentIndex >= 0 && sessionPlaylist[currentIndex]) {
+            attachTrackFirebaseListeners(sessionPlaylist[currentIndex].id);
+          }
+          resolve();
+        }
+      });
+
+      firebase.auth().signInAnonymously().catch(e => {
+        console.warn('[Firebase] Anon auth failed:', e.message);
+        resolve();
+      });
+    });
   } catch (e) {
     console.warn('[Firebase] Init failed:', e.message);
   }
@@ -75,7 +84,6 @@ function setupPresence() {
 
   connectedRef.on('value', (snap) => {
     if (snap.val() === true) {
-      // Register onDisconnect FIRST
       presenceRef.onDisconnect().remove().then(() => {
         presenceRef.set({ connectedAt: firebase.database.ServerValue.TIMESTAMP });
       });
@@ -153,28 +161,37 @@ function attachTrackFirebaseListeners(trackId) {
   likeBtn.classList.remove('liked');
   likeCount.textContent = _likeCounts[trackId] || 0;
 
-  if (!firebaseReady) return;
+  if (!firebaseReady || !db || !firebaseUid) return;
 
   // My like state
   const myLikeRef = db.ref(`/likes/${trackId}/${firebaseUid}`);
   const onMyLike  = myLikeRef.on('value', snap => likeBtn.classList.toggle('liked', snap.exists()));
   likeUnsub = () => myLikeRef.off('value', onMyLike);
 
-  // Total count from /likes/{trackId} child count
-  const likesRef = db.ref(`/likes/${trackId}`);
-  const onLikesChange = likesRef.on('value', snap => {
-    const count = snap.numChildren();
-    likeCount.textContent = count;
+  // Total count from /likeCounts/{trackId} and fallback to /likes/{trackId}
+  const countRef = db.ref(`/likeCounts/${trackId}`);
+  const onCountChange = countRef.on('value', snap => {
+    if (snap.exists()) {
+      likeCount.textContent = snap.val();
+    } else {
+      db.ref(`/likes/${trackId}`).once('value', lSnap => {
+        likeCount.textContent = lSnap.numChildren();
+      });
+    }
   });
-  likeCountUnsub = () => likesRef.off('value', onLikesChange);
+  likeCountUnsub = () => countRef.off('value', onCountChange);
 }
 
 async function toggleLike() {
-  if (!firebaseReady || currentIndex < 0 || !firebaseUid) return;
+  if (!firebaseReady || currentIndex < 0 || !firebaseUid || !db) {
+    console.warn('[Firebase] Cannot toggle like: Firebase is not ready or user is not logged in');
+    return;
+  }
   const trackId  = sessionPlaylist[currentIndex].id;
   const myRef    = db.ref(`/likes/${trackId}/${firebaseUid}`);
   const countRef = db.ref(`/likeCounts/${trackId}`);
   const snap     = await myRef.once('value');
+  
   if (snap.exists()) {
     await myRef.remove();
     await countRef.transaction(n => Math.max(0, (n || 1) - 1));
@@ -257,7 +274,8 @@ function updateNowPlayingUI(track, index) {
   const nextEl   = document.getElementById('next-up-name');
   if (titleEl)  titleEl.innerText  = track.title;
   if (artistEl) artistEl.innerText = track.artist;
-  const next = sessionPlaylist[index + 1];
+  const nextIndex = (index + 1) % sessionPlaylist.length;
+  const next = sessionPlaylist[nextIndex];
   if (nextEl) nextEl.innerText = next ? `${next.title} — ${next.artist}` : 'End of queue';
 }
 
