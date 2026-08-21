@@ -1,14 +1,15 @@
 /* ================================================================
-   Shere Garba — Full Client-Side Architecture (6 Phases)
+   Shere Garba — Full Client-Side Architecture with YouTube IFrame API
    Phase 1: Individual Sessions    Phase 4: Dynamic Ordering
    Phase 2: Firebase Presence      Phase 5: Schedule + Like Counts
    Phase 3: Like System            Phase 6: Theme / UI / Shortcuts
    ================================================================ */
 'use strict';
 
-// ─── Core Audio + Session State ──────────────────────────────────
-const audio = new Audio();
-audio.preload = 'auto';
+// ─── YouTube Player & Core Session State ─────────────────────────
+let ytPlayer          = null;
+let ytPlayerReady     = false;
+let progressPollTimer = null;
 
 let sessionPlaylist  = [];     // Phase 4: frozen sorted queue for this session
 let currentIndex     = -1;     // Current position in sessionPlaylist
@@ -24,6 +25,56 @@ let _likeCounts    = {};       // Snapshot at session-start (for sorting)
 let likeUnsub      = null;     // Detach current-track like listener
 let likeCountUnsub = null;     // Detach current-track count listener
 let scheduleCountUnsub = null; // Detach schedule-wide count listener
+
+/* ══════════════════════════════════════════════════════════════
+   YOUTUBE IFRAME API INITIALIZATION
+   ══════════════════════════════════════════════════════════════ */
+window.onYouTubeIframeAPIReady = function() {
+  ytPlayer = new YT.Player('yt-player', {
+    height: '0',
+    width: '0',
+    videoId: '',
+    playerVars: {
+      autoplay: 0,
+      controls: 0,
+      rel: 0,
+      modestbranding: 1
+    },
+    events: {
+      onReady: onYTPlayerReady,
+      onStateChange: onYTPlayerStateChange,
+      onError: onYTPlayerError
+    }
+  });
+};
+
+function onYTPlayerReady(event) {
+  ytPlayerReady = true;
+  console.log('[YouTube API] ✓ Player ready');
+  startProgressPolling();
+  if (currentIndex >= 0 && sessionPlaylist[currentIndex]) {
+    loadTrackIntoYT(currentIndex, false);
+  }
+}
+
+function onYTPlayerStateChange(event) {
+  updatePlayBtnUI();
+  if (event.data === YT.PlayerState.ENDED) {
+    if (isRepeat) {
+      if (ytPlayer && ytPlayer.playVideo) ytPlayer.playVideo();
+    } else if (isShuffle) {
+      skipTo(Math.floor(Math.random() * sessionPlaylist.length));
+    } else {
+      skipTo(currentIndex + 1);
+    }
+  }
+}
+
+function onYTPlayerError(event) {
+  console.warn('[YouTube API] Player error code:', event.data, 'for track:', sessionPlaylist[currentIndex]);
+  // Auto-skip on broken/restricted video ID
+  skipTo(currentIndex + 1);
+}
 
 /* ══════════════════════════════════════════════════════════════
    PHASE 2 — Firebase Anonymous Auth + Presence
@@ -112,23 +163,30 @@ async function buildSessionPlaylist(rawList) {
 }
 
 /* ══════════════════════════════════════════════════════════════
-   PHASE 1 — Client-Side Audio Engine
+   YOUTUBE ENGINE CONTROLS
    ══════════════════════════════════════════════════════════════ */
-function playTrack(index) {
+function loadTrackIntoYT(index, shouldPlay = true) {
   if (index < 0 || index >= sessionPlaylist.length) return;
   currentIndex = index;
-  const track  = sessionPlaylist[index];
+  const track = sessionPlaylist[index];
 
-  audio.src = track.url;
-  audio.load();
-  audio.addEventListener('canplay', function go() {
-    audio.removeEventListener('canplay', go);
-    if (hasStarted) audio.play().catch(() => {});
-  });
+  console.log('[YouTube API] Loading track:', track.title, '| videoId:', track.youtubeId);
+
+  if (ytPlayerReady && ytPlayer) {
+    if (shouldPlay) {
+      ytPlayer.loadVideoById(track.youtubeId);
+    } else {
+      ytPlayer.cueVideoById(track.youtubeId);
+    }
+  }
 
   updateNowPlayingUI(track, index);
   attachTrackFirebaseListeners(track.id); // Phase 3
   renderSchedule();                       // Phase 5
+}
+
+function playTrack(index) {
+  loadTrackIntoYT(index, hasStarted);
 }
 
 function skipTo(index) {
@@ -136,20 +194,36 @@ function skipTo(index) {
 }
 
 function skipSeconds(delta) {
-  if (!audio.duration) return;
-  audio.currentTime = Math.max(0, Math.min(audio.duration - 0.1, audio.currentTime + delta));
+  if (!ytPlayerReady || !ytPlayer || !ytPlayer.getCurrentTime) return;
+  const cur = ytPlayer.getCurrentTime() || 0;
+  const dur = ytPlayer.getDuration() || 0;
+  ytPlayer.seekTo(Math.max(0, Math.min(dur - 0.1, cur + delta)), true);
 }
 
-audio.addEventListener('ended', () => {
-  if (isRepeat) { audio.currentTime = 0; audio.play().catch(() => {}); }
-  else skipTo(currentIndex + 1);
-});
+function togglePlayPause() {
+  hasStarted = true;
+  const prompt = document.getElementById('autoplay-prompt');
+  if (prompt) prompt.style.display = 'none';
+
+  if (!ytPlayerReady || !ytPlayer) return;
+  
+  if (currentIndex < 0) {
+    skipTo(0);
+    return;
+  }
+
+  const state = ytPlayer.getPlayerState ? ytPlayer.getPlayerState() : -1;
+  if (state === YT.PlayerState.PLAYING) {
+    ytPlayer.pauseVideo();
+  } else {
+    ytPlayer.playVideo();
+  }
+}
 
 /* ══════════════════════════════════════════════════════════════
    PHASE 3 — Like System
    ══════════════════════════════════════════════════════════════ */
 function attachTrackFirebaseListeners(trackId) {
-  // Detach previous listeners
   if (likeUnsub)      { likeUnsub();      likeUnsub      = null; }
   if (likeCountUnsub) { likeCountUnsub(); likeCountUnsub = null; }
 
@@ -157,23 +231,19 @@ function attachTrackFirebaseListeners(trackId) {
   const likeCount = document.getElementById('like-count');
   if (!likeBtn || !likeCount) return;
 
-  // Reset UI while loading
   likeBtn.classList.remove('liked');
   likeCount.textContent = _likeCounts[trackId] || 0;
 
   if (!firebaseReady || !db || !firebaseUid) return;
 
-  // My like state
   const myLikeRef = db.ref(`/likes/${trackId}/${firebaseUid}`);
   const onMyLike  = myLikeRef.on('value', snap => likeBtn.classList.toggle('liked', snap.exists()));
   likeUnsub = () => myLikeRef.off('value', onMyLike);
 
-  // Directly count child entries under /likes/{trackId}
   const likesRef = db.ref(`/likes/${trackId}`);
   const onLikesChange = likesRef.on('value', snap => {
     const totalLikes = snap.numChildren();
     likeCount.textContent = totalLikes;
-    // Also sync likeCounts node so schedule view gets live updates
     db.ref(`/likeCounts/${trackId}`).set(totalLikes);
   });
   likeCountUnsub = () => likesRef.off('value', onLikesChange);
@@ -198,10 +268,10 @@ async function toggleLike() {
 /* ══════════════════════════════════════════════════════════════
    PHASE 5 — Schedule View with Real-Time Like Counts
    ══════════════════════════════════════════════════════════════ */
-let scheduleLiveCounts = {}; // live counts for display (updated by Firebase)
+let scheduleLiveCounts = {};
 
 function attachScheduleFirebaseListener() {
-  if (!firebaseReady) return;
+  if (!firebaseReady || !db) return;
   const ref = db.ref('/likeCounts');
   scheduleCountUnsub = () => ref.off();
   ref.on('value', snap => {
@@ -214,7 +284,6 @@ function renderSchedule() {
   const container = document.getElementById('playlist-items');
   if (!container || !sessionPlaylist.length) return;
 
-  // Build display list sorted by live counts
   const display = [...sessionPlaylist].sort((a, b) => {
     const diff = (scheduleLiveCounts[b.id] || 0) - (scheduleLiveCounts[a.id] || 0);
     return diff !== 0 ? diff : a.id - b.id;
@@ -252,7 +321,7 @@ function renderSchedule() {
         <span class="playlist-track-duration">${formatTime(t.duration)}</span>
       </div>`;
 
-    const go = () => { hasStarted = true; skipTo(idx); audio.play().catch(() => {}); };
+    const go = () => { hasStarted = true; skipTo(idx); if (ytPlayer && ytPlayer.playVideo) ytPlayer.playVideo(); };
     item.onclick = go;
     item.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(); } };
     container.appendChild(item);
@@ -276,44 +345,43 @@ function updateNowPlayingUI(track, index) {
 function updatePlayBtnUI() {
   const btn = document.getElementById('play-btn');
   if (!btn) return;
-  const paused = audio.paused;
-  btn.innerHTML = paused
-    ? '<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>'
-    : '<svg viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>';
-  btn.setAttribute('aria-label', paused ? 'Play' : 'Pause');
+  const playing = ytPlayerReady && ytPlayer && ytPlayer.getPlayerState && ytPlayer.getPlayerState() === YT.PlayerState.PLAYING;
+  btn.innerHTML = playing
+    ? '<svg viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>'
+    : '<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>';
+  btn.setAttribute('aria-label', playing ? 'Pause' : 'Play');
 }
 
-audio.addEventListener('play',    updatePlayBtnUI);
-audio.addEventListener('pause',   updatePlayBtnUI);
-audio.addEventListener('playing', updatePlayBtnUI);
-
-function togglePlayPause() {
-  hasStarted = true;
-  if (currentIndex < 0) { skipTo(0); audio.play().catch(() => {}); return; }
-  if (audio.paused) audio.play().catch(() => {}); else audio.pause();
+function startProgressPolling() {
+  if (progressPollTimer) clearInterval(progressPollTimer);
+  progressPollTimer = setInterval(updateProgress, 500);
 }
 
-// Progress
 function updateProgress() {
+  if (!ytPlayerReady || !ytPlayer || !ytPlayer.getCurrentTime) return;
   const fill = document.getElementById('progress-fill-bar');
   const cur  = document.getElementById('time-current');
   const rem  = document.getElementById('time-remaining');
   const wrap = document.getElementById('player-progress-wrap');
-  const c = audio.currentTime || 0, d = audio.duration || 1;
+
+  const c = ytPlayer.getCurrentTime() || 0;
+  const d = ytPlayer.getDuration() || (sessionPlaylist[currentIndex]?.duration || 1);
   const pct = Math.min(100, (c / d) * 100);
+
   if (fill) fill.style.width = `${pct}%`;
   if (cur)  cur.innerText   = formatTime(c);
   if (rem)  rem.innerText   = `-${formatTime(Math.max(0, d - c))}`;
   if (wrap) wrap.setAttribute('aria-valuenow', Math.round(pct));
 }
-audio.addEventListener('timeupdate', updateProgress);
 
 const progressWrap = document.getElementById('player-progress-wrap');
 if (progressWrap) {
   progressWrap.addEventListener('click', e => {
-    if (!audio.duration) return;
+    if (!ytPlayerReady || !ytPlayer || !ytPlayer.getDuration) return;
     const r = progressWrap.getBoundingClientRect();
-    audio.currentTime = ((e.clientX - r.left) / r.width) * audio.duration;
+    const d = ytPlayer.getDuration() || 1;
+    const targetSeconds = ((e.clientX - r.left) / r.width) * d;
+    ytPlayer.seekTo(targetSeconds, true);
   });
 }
 
@@ -322,7 +390,6 @@ function formatTime(s) {
   return `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
 }
 
-// Listener count
 function updateListenerCount(n) {
   const el = document.getElementById('listeners-count');
   if (el) el.innerText = `${n} dancing right now`;
@@ -340,7 +407,12 @@ function wireControls() {
   $('btn-next-mini')?.addEventListener('click', () => skipTo(currentIndex + 1));
   $('btn-skip-back')?.addEventListener('click', () => skipSeconds(-15));
   $('btn-skip-fwd') ?.addEventListener('click', () => skipSeconds(15));
-  $('autoplay-join-btn')?.addEventListener('click', () => { hasStarted = true; audio.play().catch(() => {}); });
+  $('autoplay-join-btn')?.addEventListener('click', () => { 
+    hasStarted = true; 
+    const prompt = $('autoplay-prompt');
+    if (prompt) prompt.style.display = 'none';
+    if (ytPlayer && ytPlayer.playVideo) ytPlayer.playVideo(); 
+  });
   $('like-btn')     ?.addEventListener('click', toggleLike);
 
   $('btn-shuffle')?.addEventListener('click', () => {
@@ -349,12 +421,11 @@ function wireControls() {
   });
   $('btn-repeat')?.addEventListener('click', () => {
     isRepeat = !isRepeat;
-    audio.loop = isRepeat;
     $('btn-repeat')?.classList.toggle('active', isRepeat);
   });
 
   // Theme toggle
-  const SUN  = `<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12 7c-2.76 0-5 2.24-5 5s2.24 5 5 5 5-2.24 5-5-2.24-5-5-5zM2 13h2c.55 0 1-.45 1-1s-.45-1-1-1H2c-.55 0-1 .45-1 1s.45 1 1 1zm18 0h2c.55 0 1-.45 1-1s-.45-1-1-1h-2c-.55 0-1 .45-1 1s.45 1 1 1zM11 2v2c0 .55.45 1 1 1s1-.45 1-1V2c0-.55-.45-1-1-1s-1 .45-1 1zm0 18v2c0 .55.45 1 1 1s1-.45 1-1v-2c0-.55-.45-1-1-1s-1 .45-1 1zM5.99 4.58c-.39-.39-1.03-.39-1.41 0s-.39 1.03 0 1.41l1.06 1.06c.39.39 1.03.39 1.41 0s.39-1.03 0-1.41L5.99 4.58zm12.37 12.37c-.39-.39-1.03-.39-1.41 0s-.39 1.03 0 1.41l1.06 1.06c.39.39 1.03.39 1.41 0s.39-1.03 0-1.41l-1.06-1.06zm1.06-12.37l-1.06 1.06c-.39.39-.39 1.03 0 1.41s1.03.39 1.41 0l1.06-1.06c.39-.39.39-1.03 0-1.41s-1.03-.39-1.41 0zm-12.37 12.37l-1.06 1.06c-.39.39-.39 1.03 0 1.41s1.03.39 1.41 0l1.06-1.06c.39-.39.39-1.03 0-1.41s-1.03-.39-1.41 0z"/></svg>`;
+  const SUN  = `<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12 7c-2.76 0-5 2.24-5 5s2.24 5 5 5 5-2.24 5-5-2.24-5-5-2.24-5-5-2.24-5-5-5zM2 13h2c.55 0 1-.45 1-1s-.45-1-1-1H2c-.55 0-1 .45-1 1s.45 1 1 1zm18 0h2c.55 0 1-.45 1-1s-.45-1-1-1h-2c-.55 0-1 .45-1 1s.45 1 1 1zM11 2v2c0 .55.45 1 1 1s1-.45 1-1V2c0-.55-.45-1-1-1s-1 .45-1 1zm0 18v2c0 .55.45 1 1 1s1-.45 1-1v-2c0-.55-.45-1-1-1s-1 .45-1 1zM5.99 4.58c-.39-.39-1.03-.39-1.41 0s-.39 1.03 0 1.41l1.06 1.06c.39.39 1.03.39 1.41 0s.39-1.03 0-1.41L5.99 4.58zm12.37 12.37c-.39-.39-1.03-.39-1.41 0s-.39 1.03 0 1.41l1.06 1.06c.39.39 1.03.39 1.41 0s.39-1.03 0-1.41l-1.06-1.06zm1.06-12.37l-1.06 1.06c-.39.39-.39 1.03 0 1.41s1.03.39 1.41 0l1.06-1.06c.39-.39.39-1.03 0-1.41s-1.03-.39-1.41 0zm-12.37 12.37l-1.06 1.06c-.39.39-.39 1.03 0 1.41s1.03.39 1.41 0l1.06-1.06c.39-.39.39-1.03 0-1.41s-1.03-.39-1.41 0z"/></svg>`;
   const MOON = `<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12.3 2a10 10 0 0 0-1.9 20 10 10 0 0 0 9.6-7 1 1 0 0 0-1.2-1.2 8 8 0 1 1-8.5-10.6 1 1 0 0 0-1-1.2z"/></svg>`;
 
   function applyTheme(t) {
@@ -389,7 +460,12 @@ function wireControls() {
     if (e.code === 'Space')      { e.preventDefault(); togglePlayPause(); }
     if (e.code === 'ArrowRight') { e.preventDefault(); isShuffle ? skipTo(Math.floor(Math.random() * sessionPlaylist.length)) : skipTo(currentIndex + 1); }
     if (e.code === 'ArrowLeft')  { e.preventDefault(); skipTo(currentIndex - 1); }
-    if (e.code === 'KeyM')       { e.preventDefault(); audio.muted = !audio.muted; }
+    if (e.code === 'KeyM')       { 
+      e.preventDefault(); 
+      if (ytPlayer && ytPlayer.isMuted) {
+        if (ytPlayer.isMuted()) ytPlayer.unMute(); else ytPlayer.mute();
+      }
+    }
   });
 }
 
@@ -399,31 +475,18 @@ function wireControls() {
 document.addEventListener('DOMContentLoaded', async () => {
   wireControls();
 
-  // Phase 2: Firebase first (so likes are ready before sorting)
   await initFirebase();
 
-  // Phase 1: Fetch playlist from server
   let rawPlaylist = [];
   try {
     rawPlaylist = await fetch('/api/playlist').then(r => r.json());
   } catch (e) { console.error('Failed to fetch playlist:', e); return; }
 
-  // Phase 4: Sort by likes → freeze session queue
   sessionPlaylist = await buildSessionPlaylist(rawPlaylist);
 
-  // Phase 5: Wire real-time schedule listener
   attachScheduleFirebaseListener();
   renderSchedule();
 
-  // Phase 1: Load first track (don't auto-play — wait for user gesture)
   playTrack(0);
   updateListenerCount(1);
-
-  // Autoplay prompt for browsers that block it
-  const prompt = document.getElementById('autoplay-prompt');
-  if (prompt) {
-    audio.play()
-      .then(() => { hasStarted = true; if (prompt) prompt.style.display = 'none'; })
-      .catch(() => { if (prompt) prompt.style.display = 'flex'; });
-  }
 });

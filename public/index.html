@@ -46,8 +46,15 @@
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
   <script src="/firebase-config.js"></script>
+
+  <!-- YouTube IFrame Player API -->
+  <script src="https://www.youtube.com/iframe_api"></script>
 </head>
 <body>
+  <!-- Hidden YouTube IFrame Player Container -->
+  <div id="yt-player-container" style="position:absolute; width:1px; height:1px; opacity:0; pointer-events:none; overflow:hidden;">
+    <div id="yt-player"></div>
+  </div>
 
   <!-- ── Fixed Floating Top Glass Bar Header ── -->
   <header id="site-header" class="site-header">
