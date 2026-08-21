@@ -39,7 +39,8 @@ window.onYouTubeIframeAPIReady = function() {
       autoplay: 0,
       controls: 0,
       rel: 0,
-      modestbranding: 1
+      modestbranding: 1,
+      origin: window.location.origin
     },
     events: {
       onReady: onYTPlayerReady,
@@ -554,6 +555,5 @@ document.addEventListener('DOMContentLoaded', async () => {
   attachScheduleFirebaseListener();
   renderSchedule();
 
-  playTrack(0);
   updateListenerCount(1);
 });

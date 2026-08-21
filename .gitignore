@@ -11,4 +11,3 @@ package-lock.json
 
 # ── Firebase secrets — NEVER commit these ──
 .env
-public/firebase-config.js
