@@ -237,6 +237,16 @@ body {
   width: 16px; height: 16px; fill: currentColor; display: block;
 }
 
+@keyframes countPop {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.15); color: var(--gold-accent); }
+  100% { transform: scale(1); }
+}
+
+.count-pop {
+  animation: countPop 0.35s ease-out;
+}
+
 /* --- MOBILE PHONE VIEWPORT OPTIMIZATIONS --- */
 @media (max-width: 650px) {
   .site-header {

@@ -392,7 +392,14 @@ function formatTime(s) {
 
 function updateListenerCount(n) {
   const el = document.getElementById('listeners-count');
-  if (el) el.innerText = `${n} dancing right now`;
+  if (!el) return;
+  const newText = `${n} listening now`;
+  if (el.innerText !== newText) {
+    el.innerText = newText;
+    el.classList.remove('count-pop');
+    void el.offsetWidth; // trigger reflow
+    el.classList.add('count-pop');
+  }
 }
 
 /* ══════════════════════════════════════════════════════════════
