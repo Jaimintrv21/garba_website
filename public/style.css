@@ -104,13 +104,13 @@ body {
   transition: background var(--theme-speed) var(--ease), color var(--theme-speed) var(--ease);
 }
 
-/* ── Samsung One UI Floating Glass Header Navigation ───────── */
+/* ── Native Tab Bar Header Navigation (Apple Music Style) ───────── */
 .site-header {
   position: fixed;
   top: calc(0.5rem + var(--safe-top));
   left: 50%;
   transform: translateX(-50%);
-  width: min(1000px, calc(100% - 0.8rem));
+  width: min(1000px, calc(100% - 1.2rem));
   z-index: 250;
 }
 
@@ -118,15 +118,33 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.4rem 0.75rem;
+  padding: 0.6rem 1.6rem;
   border-radius: 100px;
-  gap: 0.4rem;
-  background: var(--glass-bg);
-  backdrop-filter: blur(40px) saturate(210%) brightness(110%);
-  -webkit-backdrop-filter: blur(40px) saturate(210%) brightness(110%);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-top: 1px solid rgba(255, 255, 255, 0.4);
-  box-shadow: inset 0 1.5px 2px rgba(255, 255, 255, 0.3), inset 0 -1.5px 2px rgba(0, 0, 0, 0.35), 0 12px 32px rgba(0, 0, 0, 0.6);
+  gap: 0.8rem;
+  background: rgba(255, 255, 255, 0.18);
+  backdrop-filter: blur(50px) saturate(240%) brightness(115%);
+  -webkit-backdrop-filter: blur(50px) saturate(240%) brightness(115%);
+  border: 1px solid rgba(255, 255, 255, 0.35) !important;
+  border-top: 1.5px solid rgba(255, 255, 255, 0.7) !important;
+  box-shadow: 
+    inset 0 2px 4px rgba(255, 255, 255, 0.5),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.3),
+    0 20px 50px rgba(0, 0, 0, 0.3),
+    0 0 30px rgba(255, 180, 40, 0.25);
+  transition: all 0.3s var(--ease);
+}
+
+:root[data-theme="night"] .header-container,
+html[data-theme="night"] .header-container,
+body[data-theme="night"] .header-container {
+  background: linear-gradient(135deg, rgba(32, 12, 24, 0.88) 0%, rgba(18, 6, 14, 0.94) 100%);
+  border: 1px solid rgba(255, 200, 55, 0.35) !important;
+  border-top: 1.5px solid rgba(255, 255, 255, 0.5) !important;
+  box-shadow: 
+    inset 0 2px 4px rgba(255, 255, 255, 0.35),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.6),
+    0 24px 60px rgba(0, 0, 0, 0.75),
+    0 0 35px rgba(255, 160, 0, 0.3);
 }
 
 .brand-logo {
@@ -144,9 +162,8 @@ body {
 }
 
 .brand-logo-img {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
+  width: 100%;
+  height: 100%;
   object-fit: cover;
   display: block;
   filter: drop-shadow(0 0 6px rgba(255, 160, 0, 0.55));
@@ -174,54 +191,97 @@ body {
   -webkit-text-fill-color: transparent;
 }
 
+/* Tab Bar Navigation Component */
 .main-nav {
   display: flex;
   align-items: center;
-  gap: 0.25rem;
-  overflow-x: auto;
-  white-space: nowrap;
-  scroll-behavior: smooth;
-  -webkit-overflow-scrolling: touch;
-  max-width: calc(100vw - 160px);
-  padding: 0.1rem 0;
+  justify-content: space-evenly;
+  gap: 0.35rem;
+  flex: 1 1 auto;
+  max-width: 720px;
+  padding: 0;
 }
 
-.main-nav::-webkit-scrollbar {
-  display: none;
-}
-
-.main-nav {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-}
-
+/* Individual Native App Tab */
 .nav-link {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 0.3rem;
-  color: var(--text-sub);
+  justify-content: center;
+  gap: 3px;
+  color: rgba(255, 255, 255, 0.55);
   text-decoration: none;
-  font-size: 0.78rem;
+  font-size: 0.68rem;
   font-weight: 600;
-  padding: 0.35rem 0.6rem;
-  border-radius: 100px;
-  flex-shrink: 0;
-  transition: all 0.22s var(--ease);
+  padding: 0.3rem 0.5rem;
+  border-radius: 14px;
+  flex: 1 1 0;
+  min-width: 0;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: color 0.25s var(--ease), transform 0.25s var(--spring);
+}
+
+:root[data-theme="day"] .nav-link {
+  color: rgba(30, 20, 25, 0.55);
+}
+
+.nav-link span {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1;
 }
 
 .nav-link svg {
-  width: 14px;
-  height: 14px;
+  width: 20px;
+  height: 20px;
   fill: currentColor;
-  opacity: 0.85;
+  opacity: 0.75;
   flex-shrink: 0;
+  transition: transform 0.25s var(--spring), opacity 0.25s var(--ease), fill 0.25s var(--ease), filter 0.25s var(--ease);
 }
 
-.nav-link:hover,
+/* Integrated Theme Button Specific Morph & Glow Rules */
+.theme-nav-link {
+  font-family: inherit;
+}
+
+.sun-moon-svg {
+  transition: transform 0.4s var(--spring), filter 0.3s var(--ease);
+}
+
+.sun-active {
+  color: #ffb400;
+  filter: drop-shadow(0 0 6px rgba(255, 180, 0, 0.8));
+}
+
+.moon-active {
+  color: #a5b4fc;
+  filter: drop-shadow(0 0 6px rgba(165, 180, 252, 0.75));
+}
+
+.theme-nav-link:hover .sun-moon-svg {
+  transform: rotate(20deg) scale(1.15);
+}
+
+/* Active Tab State (Refined Premium Gold Glow) */
+.nav-link:hover {
+  color: var(--gold-accent);
+  transform: translateY(-1px);
+}
+
 .nav-link.active {
-  color: #090206;
-  background: linear-gradient(135deg, var(--gold-accent), var(--marigold-accent));
-  box-shadow: 0 4px 14px rgba(255, 160, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  color: var(--gold-accent);
+  font-weight: 800;
+}
+
+.nav-link.active svg {
+  fill: var(--gold-accent);
+  opacity: 1;
+  transform: scale(1.1);
+  filter: drop-shadow(0 0 6px rgba(255, 180, 40, 0.45));
 }
 
 .header-actions {
@@ -294,249 +354,253 @@ body {
   animation: countPop 0.35s ease-out;
 }
 
-/* --- MOBILE PHONE VIEWPORT OPTIMIZATIONS --- */
+/* --- FLOATING LIQUID GLASS PILL DOCK FOR MOBILE --- */
 @media (max-width: 650px) {
   .site-header {
-    width: min(960px, calc(100% - 1.2rem));
+    position: fixed;
     top: auto;
-    bottom: calc(0.9rem + var(--safe-bottom));
+    bottom: calc(0.8rem + var(--safe-bottom));
+    left: 50%;
+    right: auto;
+    width: min(960px, calc(100% - 1.2rem));
+    transform: translateX(-50%);
+    z-index: 1000;
   }
 
   .header-container {
-    padding: 0.5rem 0.75rem;
-    gap: 0.3rem;
-    justify-content: space-between;
+    display: flex;
     align-items: center;
-    border-radius: 100px; /* Grand Floating Apple Glass Dock */
-    background: var(--glass-bg);
-    backdrop-filter: blur(60px) saturate(280%) brightness(120%);
-    -webkit-backdrop-filter: blur(60px) saturate(280%) brightness(120%);
-    border: 1px solid var(--glass-border);
-    border-top: 1.5px solid rgba(255, 255, 255, 0.65);
+    justify-content: space-between;
+    width: 100%;
+    padding: 0.55rem 0.85rem;
+    border-radius: 100px !important;
+    background: rgba(255, 255, 255, 0.32);
+    backdrop-filter: blur(60px) saturate(260%) brightness(120%);
+    -webkit-backdrop-filter: blur(60px) saturate(260%) brightness(120%);
+    border: 1px solid rgba(255, 255, 255, 0.45) !important;
+    border-top: 1.5px solid rgba(255, 255, 255, 0.75) !important;
     box-shadow: 
-      inset 0 2.5px 4px rgba(255, 255, 255, 0.45),
-      inset 0 -2.5px 4px rgba(0, 0, 0, 0.45),
-      0 24px 60px rgba(0, 0, 0, 0.85),
-      0 0 35px rgba(255, 180, 40, 0.22);
+      inset 0 2px 4px rgba(255, 255, 255, 0.6),
+      0 22px 55px rgba(0, 0, 0, 0.4),
+      0 0 30px rgba(255, 180, 40, 0.28);
   }
 
   :root[data-theme="night"] .header-container,
   html[data-theme="night"] .header-container,
   body[data-theme="night"] .header-container {
-    background: linear-gradient(135deg, rgba(32, 12, 24, 0.92) 0%, rgba(18, 6, 14, 0.96) 100%);
-    border: 1px solid rgba(255, 200, 55, 0.4);
-    border-top: 1.5px solid rgba(255, 255, 255, 0.6);
+    background: linear-gradient(135deg, rgba(32, 12, 24, 0.94) 0%, rgba(18, 6, 14, 0.98) 100%);
+    border: 1px solid rgba(255, 200, 55, 0.4) !important;
+    border-top: 1.5px solid rgba(255, 255, 255, 0.6) !important;
     box-shadow: 
-      inset 0 2.5px 3px rgba(255, 255, 255, 0.4),
-      inset 0 -2.5px 3px rgba(0, 0, 0, 0.65),
-      0 28px 65px rgba(0, 0, 0, 0.9),
-      0 0 30px rgba(255, 160, 0, 0.28);
+      inset 0 2px 4px rgba(255, 255, 255, 0.35),
+      0 26px 65px rgba(0, 0, 0, 0.9),
+      0 0 35px rgba(255, 160, 0, 0.35);
   }
 
   .brand-logo { display: none; }
 
   .main-nav {
-    max-width: none;
-    flex: 1 1 auto;
-    justify-content: space-between;
+    display: flex;
     align-items: center;
-    gap: 0.15rem;
+    justify-content: space-around;
     width: 100%;
+    max-width: 100%;
+    gap: 0.15rem;
     padding: 0;
   }
 
-  /* Bigger, spacious mobile dock buttons */
   .nav-link {
-    font-size: 0.68rem;
-    font-weight: 800;
-    padding: 0.45rem 0.5rem;
-    min-height: 56px;
-    flex: 1 1 0;
-    border-radius: 28px;
+    display: flex;
     flex-direction: column;
-    justify-content: center;
     align-items: center;
+    justify-content: center;
     gap: 3px;
-    flex-shrink: 0;
-    color: var(--text-sub);
+    flex: 1 1 0;
+    min-width: 0;
+    padding: 0.4rem 0.15rem;
+    min-height: 48px;
+    border-radius: 28px;
     background: transparent;
-    border: 1.5px solid transparent;
-    transition: all 0.25s var(--spring);
+    border: none;
+    box-shadow: none;
+    color: rgba(30, 20, 25, 0.55);
+    transition: color 0.22s var(--ease), transform 0.22s var(--spring);
   }
 
-  .nav-link span { 
-    display: block !important; 
-    line-height: 1;
-    font-size: 0.68rem;
+  :root[data-theme="night"] .nav-link,
+  html[data-theme="night"] .nav-link,
+  body[data-theme="night"] .nav-link {
+    color: rgba(255, 255, 255, 0.55);
+  }
+
+  .nav-link span {
+    font-size: 0.64rem;
     font-weight: 800;
+    line-height: 1;
     letter-spacing: -0.01em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    width: 100%;
+    text-align: center;
   }
 
-  /* Crisp 24px Vector Icons */
   .nav-link svg {
-    width: 24px;
-    height: 24px;
-    opacity: 0.88;
-    transition: transform 0.25s var(--spring), opacity 0.25s var(--ease);
+    width: 22px;
+    height: 22px;
+    fill: currentColor;
+    opacity: 0.85;
+    transition: transform 0.22s var(--spring), opacity 0.22s var(--ease), fill 0.22s var(--ease);
   }
 
-  /* Polished Oval Golden Ring Capsule Highlight */
+  /* Active Tab Highlight (Clear Gold Pill Highlight) */
   .nav-link:hover, .nav-link.active {
+    background: transparent;
+    border: none;
+    box-shadow: none;
     color: var(--gold-accent);
-    background: rgba(255, 200, 55, 0.18);
-    backdrop-filter: blur(25px);
-    -webkit-backdrop-filter: blur(25px);
-    border: 1.5px solid var(--gold-accent);
-    box-shadow: 
-      inset 0 0 12px rgba(255, 200, 55, 0.4),
-      inset 0 1.5px 2px rgba(255, 255, 255, 0.6),
-      0 0 20px rgba(255, 180, 40, 0.5);
   }
 
-  :root[data-theme="night"] .nav-link:hover,
   :root[data-theme="night"] .nav-link.active,
   html[data-theme="night"] .nav-link.active,
   body[data-theme="night"] .nav-link.active {
     color: var(--gold-accent);
-    background: rgba(255, 200, 55, 0.18);
-    border: 1.5px solid var(--gold-accent);
-    box-shadow: 
-      inset 0 0 12px rgba(255, 200, 55, 0.4),
-      inset 0 1.5px 2px rgba(255, 255, 255, 0.6),
-      0 0 20px rgba(255, 180, 40, 0.5);
+    background: transparent;
+    border: none;
+    box-shadow: none;
+  }
+
+  .nav-link.active span {
+    font-weight: 800;
   }
 
   .nav-link.active svg {
-    transform: scale(1.12);
+    fill: var(--gold-accent);
     opacity: 1;
+    transform: scale(1.12);
+    filter: drop-shadow(0 0 6px rgba(255, 180, 40, 0.5));
   }
 
-  .header-actions { margin-left: 0; }
+  .theme-nav-link span {
+    display: block;
+  }
 
-  /* Polished Liquid Glass Day/Night Theme Toggle Circle */
-  .theme-toggle-btn {
-    width: 46px;
-    height: 46px;
-    min-height: 46px;
-    padding: 0;
-    margin-left: 0.2rem;
+  /* Compact Side Day/Night Theme Toggle Pill in Phone View */
+  .header-actions {
     display: flex;
-    justify-content: center;
     align-items: center;
-    border-radius: 50%;
+    justify-content: center;
+    margin-left: 0.3rem;
     flex-shrink: 0;
-    background: rgba(255, 200, 55, 0.12);
-    border: 1.5px solid rgba(255, 200, 55, 0.4);
-    border-top: 1.5px solid rgba(255, 255, 255, 0.7);
-    backdrop-filter: blur(25px);
-    -webkit-backdrop-filter: blur(25px);
+  }
+
+  .theme-toggle-btn {
+    width: 44px;
+    height: 44px;
+    min-height: 44px;
+    padding: 0;
+    margin: 0;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 200, 55, 0.18);
+    border: 1px solid rgba(255, 200, 55, 0.45);
     color: var(--gold-accent);
-    box-shadow: 
-      inset 0 1.5px 2px rgba(255, 255, 255, 0.6),
-      0 4px 15px rgba(0, 0, 0, 0.35),
-      0 0 12px rgba(255, 180, 40, 0.25);
-    transition: transform 0.25s var(--spring), background 0.25s var(--ease), border-color 0.25s var(--ease);
+    cursor: pointer;
+    box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.5), 0 0 12px rgba(255, 180, 40, 0.25);
+    transition: transform 0.22s var(--spring), background 0.22s var(--ease);
   }
 
   .theme-toggle-btn:active {
     transform: scale(0.9);
   }
 
-  .theme-icon {
-    width: 24px;
-    height: 24px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--gold-accent);
-  }
-
-  .theme-icon svg {
-    width: 24px;
-    height: 24px;
-    fill: currentColor;
-    display: block;
-    filter: drop-shadow(0 0 6px rgba(255, 200, 55, 0.8));
+  .theme-text {
+    display: none !important;
   }
 
   /* Liquid Glass Player Enhancement on Mobile */
   .festive-player-card {
     border-radius: 32px;
-    background: linear-gradient(135deg, rgba(30, 10, 8, 0.92) 0%, rgba(21, 6, 5, 0.96) 100%);
-    backdrop-filter: blur(55px) saturate(260%) brightness(125%);
-    -webkit-backdrop-filter: blur(55px) saturate(260%) brightness(125%);
-    border: 1px solid rgba(255, 180, 40, 0.28);
-    border-top: 1.5px solid rgba(255, 200, 55, 0.55);
+    background: rgba(255, 255, 255, 0.28);
+    backdrop-filter: blur(60px) saturate(260%) brightness(120%);
+    -webkit-backdrop-filter: blur(60px) saturate(260%) brightness(120%);
+    border: 1px solid rgba(255, 255, 255, 0.45);
+    border-top: 1.5px solid rgba(255, 255, 255, 0.75);
     box-shadow: 
-      inset 0 2px 4px rgba(255, 255, 255, 0.35),
-      inset 0 -2px 3px rgba(0, 0, 0, 0.5),
-      0 24px 60px rgba(0, 0, 0, 0.88),
-      0 0 35px rgba(255, 128, 8, 0.2);
+      inset 0 2px 4px rgba(255, 255, 255, 0.6),
+      0 22px 55px rgba(0, 0, 0, 0.4),
+      0 0 30px rgba(255, 180, 40, 0.28);
   }
 
   :root[data-theme="night"] .festive-player-card,
   html[data-theme="night"] .festive-player-card,
   body[data-theme="night"] .festive-player-card {
-    background: linear-gradient(135deg, rgba(30, 10, 8, 0.92) 0%, rgba(21, 6, 5, 0.96) 100%);
-    border: 1px solid rgba(255, 180, 40, 0.28);
-    border-top: 1.5px solid rgba(255, 200, 55, 0.55);
+    background: linear-gradient(135deg, rgba(32, 12, 24, 0.94) 0%, rgba(18, 6, 14, 0.98) 100%);
+    border: 1px solid rgba(255, 200, 55, 0.4);
+    border-top: 1.5px solid rgba(255, 255, 255, 0.6);
     box-shadow: 
       inset 0 2px 4px rgba(255, 255, 255, 0.35),
-      inset 0 -2px 4px rgba(0, 0, 0, 0.6),
-      0 30px 70px rgba(0, 0, 0, 0.9),
-      0 0 45px rgba(255, 160, 0, 0.25);
+      0 26px 65px rgba(0, 0, 0, 0.9),
+      0 0 35px rgba(255, 160, 0, 0.35);
   }
 }
 
 @media (max-width: 480px) {
-  .brand-text {
-    display: none;
-  }
-
-  .brand-logo {
-    margin-right: 0;
-  }
-
-  .logo-icon-wrap {
-    width: 32px;
-    height: 32px;
-  }
-
-  .brand-logo-img {
-    width: 32px;
-    height: 32px;
+  .site-header {
+    bottom: calc(1rem + var(--safe-bottom));
+    width: calc(100% - 1rem);
   }
 
   .header-container {
-    padding: 0.35rem 0.5rem;
+    padding: 0.65rem 0.85rem;
     justify-content: space-between;
+    gap: 0.4rem;
   }
 
   .main-nav {
-    justify-content: space-evenly;
+    justify-content: space-around;
     gap: 0.2rem;
   }
 
-  .nav-link span {
-    display: none;
+  /* Bold, prominent stacked icons and text on phone view */
+  .nav-link {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 0.35rem 0.1rem;
+    min-height: 52px;
+    width: auto;
+    border-radius: 20px;
+    flex: 1 1 0;
   }
 
-  /* Shows clean icons */
-  .nav-link {
-    padding: 0;
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    justify-content: center;
+  .nav-link span {
+    display: block !important;
+    font-size: 0.66rem;
+    font-weight: 800;
+    letter-spacing: 0.01em;
+    line-height: 1;
+    white-space: nowrap;
+  }
+
+  .nav-link svg {
+    width: 24px;
+    height: 24px;
+    stroke-width: 2.2px;
   }
 
   .theme-toggle-btn {
-    width: 32px;
-    height: 32px;
-    min-height: 32px;
+    width: 48px;
+    height: 48px;
+    min-height: 48px;
     padding: 0;
     justify-content: center;
     border-radius: 50%;
+    flex-shrink: 0;
   }
 
   .theme-icon {
@@ -545,6 +609,11 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
+  }
+
+  .theme-svg-icon {
+    width: 24px;
+    height: 24px;
   }
 }
 
@@ -722,25 +791,42 @@ body[data-theme="day"] .hero-bg-night {
   position: relative;
   z-index: 2;
   width: 100%;
-  padding: clamp(16px, 4vw, 22px);
-  border-radius: 28px;
-  /* Samsung One UI Smooth Liquid Corner */
-  background: linear-gradient(135deg, rgba(30, 10, 8, 0.92) 0%, rgba(21, 6, 5, 0.96) 100%);
-  backdrop-filter: blur(48px) saturate(220%) brightness(110%);
-  -webkit-backdrop-filter: blur(48px) saturate(220%) brightness(110%);
-  border: 1px solid rgba(255, 180, 40, 0.28);
-  border-top: 1px solid rgba(255, 200, 55, 0.45);
-  box-shadow: inset 0 1.5px 2px rgba(255, 255, 255, 0.25), inset 0 -1.5px 2px rgba(0, 0, 0, 0.5), 0 24px 60px rgba(0, 0, 0, 0.88), 0 0 35px rgba(255, 128, 8, 0.2);
+  padding: clamp(18px, 4.5vw, 24px);
+  border-radius: 36px;
+  /* Translucent Liquid Glass Material matching Header Navbar Pill */
+  background: rgba(255, 255, 255, 0.18);
+  backdrop-filter: blur(55px) saturate(240%) brightness(115%);
+  -webkit-backdrop-filter: blur(55px) saturate(240%) brightness(115%);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-top: 1.5px solid rgba(255, 255, 255, 0.7);
+  box-shadow: 
+    inset 0 2px 4px rgba(255, 255, 255, 0.5),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.3),
+    0 24px 60px rgba(0, 0, 0, 0.35),
+    0 0 35px rgba(255, 180, 40, 0.25);
   display: flex;
   flex-direction: column;
   gap: 14px;
-  transition: transform 0.3s var(--ease), box-shadow 0.3s var(--ease);
+  transition: transform 0.3s var(--ease), box-shadow 0.3s var(--ease), background 0.3s var(--ease);
+}
+
+:root[data-theme="night"] .festive-player-card,
+html[data-theme="night"] .festive-player-card,
+body[data-theme="night"] .festive-player-card {
+  background: linear-gradient(135deg, rgba(32, 12, 24, 0.88) 0%, rgba(18, 6, 14, 0.94) 100%);
+  border: 1px solid rgba(255, 200, 55, 0.35);
+  border-top: 1.5px solid rgba(255, 255, 255, 0.5);
+  box-shadow: 
+    inset 0 2px 4px rgba(255, 255, 255, 0.35),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.6),
+    0 28px 70px rgba(0, 0, 0, 0.8),
+    0 0 45px rgba(255, 160, 0, 0.3);
 }
 
 .card-border-frame {
   position: absolute;
-  inset: 4px;
-  border-radius: 24px;
+  inset: 5px;
+  border-radius: 30px;
   border: 1px dashed rgba(255, 200, 55, 0.25);
   pointer-events: none;
 }
