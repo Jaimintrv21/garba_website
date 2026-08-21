@@ -1,0 +1,24 @@
+{
+  "rules": {
+    "presence": {
+      ".read": true,
+      "$uid": {
+        ".write": "auth != null && auth.uid === $uid"
+      }
+    },
+    "likes": {
+      ".read": true,
+      "$trackId": {
+        "$uid": {
+          ".write": "auth != null && auth.uid === $uid"
+        }
+      }
+    },
+    "likeCounts": {
+      ".read": true,
+      "$trackId": {
+        ".write": "auth != null"
+      }
+    }
+  }
+}

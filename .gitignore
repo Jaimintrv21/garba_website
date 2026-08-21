@@ -8,3 +8,7 @@ package-lock.json
 
 # Logs
 *.log
+
+# ── Firebase secrets — NEVER commit these ──
+.env
+public/firebase-config.js
