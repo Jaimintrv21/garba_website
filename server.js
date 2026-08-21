@@ -61,8 +61,20 @@ let radioState = {
 let sseClients = [];
 let activeSessions = new Map();
 
-function getCurrentElapsed() {
-  return (Date.now() - radioState.trackStartedAt) / 1000;
+function getFullState() {
+  const currentTrack = PLAYLIST[radioState.currentTrackIndex];
+  const nextTrack = PLAYLIST[(radioState.currentTrackIndex + 1) % PLAYLIST.length];
+  const elapsed = Math.min(getCurrentElapsed(), currentTrack.duration);
+
+  return {
+    track: currentTrack,
+    nextTrack: { title: nextTrack.title, artist: nextTrack.artist },
+    elapsed: Math.floor(elapsed),
+    duration: currentTrack.duration,
+    isPlaying: radioState.isPlaying,
+    liveListeners: Math.max(1, activeSessions.size),
+    serverTime: Date.now()
+  };
 }
 
 function advanceTrack() {
@@ -94,23 +106,13 @@ function cleanStaleSessions() {
 setInterval(cleanStaleSessions, 5000);
 
 function broadcastState() {
-  const currentTrack = PLAYLIST[radioState.currentTrackIndex];
-  const nextTrack = PLAYLIST[(radioState.currentTrackIndex + 1) % PLAYLIST.length];
-  const elapsed = Math.min(getCurrentElapsed(), currentTrack.duration);
-
-  const payload = {
-    track: currentTrack,
-    nextTrack: { title: nextTrack.title, artist: nextTrack.artist },
-    elapsed: Math.floor(elapsed),
-    duration: currentTrack.duration,
-    isPlaying: radioState.isPlaying,
-    liveListeners: Math.max(1, activeSessions.size),
-    serverTime: Date.now()
-  };
-
+  const payload = getFullState();
   const dataString = `data: ${JSON.stringify(payload)}\n\n`;
   sseClients.forEach(client => client.res.write(dataString));
 }
+
+// Periodic SSE ticker to keep all connected clients perfectly synced
+setInterval(broadcastState, 2000);
 
 // -- ENDPOINTS ----------------------------------------------------------------
 
@@ -119,19 +121,7 @@ app.get('/api/playlist', (req, res) => {
 });
 
 app.get('/api/radio-state', (req, res) => {
-  const currentTrack = PLAYLIST[radioState.currentTrackIndex];
-  const nextTrack = PLAYLIST[(radioState.currentTrackIndex + 1) % PLAYLIST.length];
-  const elapsed = Math.min(getCurrentElapsed(), currentTrack.duration);
-
-  res.json({
-    track: currentTrack,
-    nextTrack: { title: nextTrack.title, artist: nextTrack.artist },
-    elapsed: Math.floor(elapsed),
-    duration: currentTrack.duration,
-    isPlaying: radioState.isPlaying,
-    liveListeners: Math.max(1, activeSessions.size),
-    serverTime: Date.now()
-  });
+  res.json(getFullState());
 });
 
 app.get('/api/stream', (req, res) => {
@@ -144,20 +134,7 @@ app.get('/api/stream', (req, res) => {
   const newClient = { id: clientId, res };
   sseClients.push(newClient);
 
-  const currentTrack = PLAYLIST[radioState.currentTrackIndex];
-  const nextTrack = PLAYLIST[(radioState.currentTrackIndex + 1) % PLAYLIST.length];
-  const elapsed = Math.min(getCurrentElapsed(), currentTrack.duration);
-
-  const initialPayload = {
-    track: currentTrack,
-    nextTrack: { title: nextTrack.title, artist: nextTrack.artist },
-    elapsed: Math.floor(elapsed),
-    duration: currentTrack.duration,
-    isPlaying: radioState.isPlaying,
-    liveListeners: Math.max(1, activeSessions.size),
-    serverTime: Date.now()
-  };
-  res.write(`data: ${JSON.stringify(initialPayload)}\n\n`);
+  res.write(`data: ${JSON.stringify(getFullState())}\n\n`);
 
   req.on('close', () => {
     sseClients = sseClients.filter(client => client.id !== clientId);
@@ -198,13 +175,13 @@ app.post('/api/control', (req, res) => {
     }
   }
 
-  res.json({ success: true, currentTrack: PLAYLIST[radioState.currentTrackIndex] });
+  res.json({ success: true, ...getFullState() });
 });
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`\n  ?? Navratri Dhamaka server is live!`);
-  console.log(`  ?? Radio streaming at http://localhost:${PORT}`);
-  console.log(`  ?? SSE endpoint: http://localhost:${PORT}/api/stream`);
-  console.log(`  ?? Playlist: ${PLAYLIST.length} tracks loaded\n`);
+  console.log(`\n  🥁 Shere Garba server is live!`);
+  console.log(`  📻 Radio streaming at http://localhost:${PORT}`);
+  console.log(`  ⚡ SSE endpoint: http://localhost:${PORT}/api/stream`);
+  console.log(`  🎵 Playlist: ${PLAYLIST.length} tracks loaded\n`);
 });

@@ -1,5 +1,5 @@
 /* -----------------------------------------------
-   NAVRATRI DHAMAKA — Front-End Application Logic
+   Shere Garba — Front-End Application Logic
    Audio Synchronization Engine & Play/Pause Sync
    ----------------------------------------------- */
 
@@ -7,15 +7,17 @@ let audio = new Audio();
 let sessionId = null;
 let currentListenersCount = 0;
 let playlistData = [];
+let activeTrackId = null;
+let hasUserStartedPlay = false;
 
 audio.preload = 'auto';
 
 // Initialize Session ID
 function initSession() {
-  sessionId = sessionStorage.getItem('nd_session_id');
+  sessionId = sessionStorage.getItem('sg_session_id') || sessionStorage.getItem('nd_session_id');
   if (!sessionId) {
     sessionId = crypto.randomUUID();
-    sessionStorage.setItem('nd_session_id', sessionId);
+    sessionStorage.setItem('sg_session_id', sessionId);
   }
 }
 
@@ -60,19 +62,20 @@ function fetchSyncFallback() {
 function handleServerSync(data) {
   if (!data || !data.track) return;
 
-  const isNewTrack = audio.src !== window.location.origin + data.track.url &&
-                     !audio.src.endsWith(encodeURI(data.track.url)) &&
-                     !audio.src.endsWith(data.track.url);
-
+  const isNewTrack = activeTrackId !== data.track.id;
+  
   if (isNewTrack) {
+    activeTrackId = data.track.id;
     audio.src = data.track.url;
-    audio.play().catch(e => console.log('Autoplay blocked:', e));
+    if (hasUserStartedPlay) {
+      audio.play().catch(e => console.log('Autoplay deferred:', e));
+    }
   }
 
-  if (audio.duration && !isNaN(data.elapsed)) {
+  if (audio.duration && !isNaN(data.elapsed) && !isNaN(audio.duration)) {
     const drift = Math.abs(audio.currentTime - data.elapsed);
     if (drift > 2.5) {
-      audio.currentTime = Math.min(data.elapsed, audio.duration - 0.5);
+      audio.currentTime = Math.min(data.elapsed, Math.max(0, audio.duration - 0.5));
     }
   }
 
@@ -120,6 +123,7 @@ audio.addEventListener('pause', updatePlayBtnUI);
 audio.addEventListener('playing', updatePlayBtnUI);
 
 function togglePlayPause() {
+  hasUserStartedPlay = true;
   if (audio.paused) {
     audio.play().catch(err => console.error('Audio play error:', err));
   } else {
@@ -134,6 +138,7 @@ let isShuffle = false;
 let isRepeat = false;
 
 function triggerTrackChange(action) {
+  hasUserStartedPlay = true;
   fetch('/api/control', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -141,8 +146,8 @@ function triggerTrackChange(action) {
   })
   .then(res => res.json())
   .then(data => {
-    if (data.currentTrack) {
-      audio.src = data.currentTrack.url;
+    if (data.track) {
+      handleServerSync(data);
       audio.play().catch(() => {});
     }
   })
@@ -173,6 +178,8 @@ if (btnRepeat) {
   });
 }
 
+let lastEndedTrackId = null;
+
 audio.addEventListener('ended', () => {
   if (isRepeat) {
     audio.currentTime = 0;
@@ -180,7 +187,10 @@ audio.addEventListener('ended', () => {
   } else if (isShuffle) {
     triggerTrackChange('shuffle');
   } else {
-    triggerTrackChange('next');
+    if (lastEndedTrackId !== activeTrackId) {
+      lastEndedTrackId = activeTrackId;
+      triggerTrackChange('next');
+    }
   }
 });
 
@@ -236,9 +246,9 @@ function setListenerCount(newCount) {
 }
 
 // --- UI RENDER & PLAYLIST TABLE ------------------------------
-let activeTrackId = null;
 
 function updateUI(data) {
+  if (!data || !data.track) return;
   activeTrackId = data.track.id;
   const titleEl = document.getElementById('track-title');
   const artistEl = document.getElementById('track-artist');
@@ -246,7 +256,7 @@ function updateUI(data) {
 
   if (titleEl) titleEl.innerText = data.track.title;
   if (artistEl) artistEl.innerText = data.track.artist;
-  if (nextTrackEl && data.nextTrack) nextTrackEl.innerText = `${data.nextTrack.title} - ${data.nextTrack.artist}`;
+  if (nextTrackEl && data.nextTrack) nextTrackEl.innerText = `${data.nextTrack.title} — ${data.nextTrack.artist}`;
 
   setListenerCount(data.liveListeners || 1);
   renderPlaylistTable();
@@ -263,11 +273,20 @@ function renderPlaylistTable() {
     item.className = `playlist-item ${isCurrent ? 'active' : ''}`;
     item.style.cursor = 'pointer';
     item.onclick = () => {
+      hasUserStartedPlay = true;
       fetch('/api/control', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'playTrack', trackId: t.id })
-      }).catch(console.error);
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.track) {
+          handleServerSync(data);
+          audio.play().catch(() => {});
+        }
+      })
+      .catch(console.error);
     };
 
     item.innerHTML = `

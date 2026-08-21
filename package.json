@@ -1,7 +1,7 @@
 {
-  "name": "navratri-dhamaka",
+  "name": "shere-garba",
   "version": "1.0.0",
-  "description": "Navratri Dhamaka — Free ambient Navratri/Garba radio experience",
+  "description": "Shere Garba — Free ambient Garba radio experience",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
