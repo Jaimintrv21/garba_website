@@ -1,17 +1,13 @@
 /* ================================================================
-   Shere Garba — Full Client-Side Architecture with YouTube IFrame API
-   Phase 1: Individual Sessions    Phase 4: Dynamic Ordering
-   Phase 2: Firebase Presence      Phase 5: Schedule + Like Counts
-   Phase 3: Like System            Phase 6: Theme / UI / Shortcuts
+   Shere Garba — Local Song Audio Player + Realtime Firebase Architecture
    ================================================================ */
 'use strict';
 
-// ─── YouTube Player & Core Session State ─────────────────────────
-let ytPlayer          = null;
-let ytPlayerReady     = false;
-let progressPollTimer = null;
+// ─── Core Audio + Session State ──────────────────────────────────
+const audio = new Audio();
+audio.preload = 'auto';
 
-let sessionPlaylist  = [];     // Phase 4: frozen sorted queue for this session
+let sessionPlaylist  = [];     // Frozen sorted queue for this session
 let currentIndex     = -1;     // Current position in sessionPlaylist
 let hasStarted       = false;  // User has interacted (play pressed)
 let isShuffle        = false;
@@ -21,61 +17,11 @@ let isRepeat         = false;
 let db             = null;
 let firebaseUid    = null;
 let firebaseReady  = false;
-let _likeCounts    = {};       // Snapshot at session-start (for sorting)
+let _likeCounts    = {};       // Snapshot at session-start
+let currentTrackId = 1;
 let likeUnsub      = null;     // Detach current-track like listener
 let likeCountUnsub = null;     // Detach current-track count listener
 let scheduleCountUnsub = null; // Detach schedule-wide count listener
-
-/* ══════════════════════════════════════════════════════════════
-   YOUTUBE IFRAME PLAYLIST INITIALIZATION
-   ══════════════════════════════════════════════════════════════ */
-window.onYouTubeIframeAPIReady = function() {
-  ytPlayer = new YT.Player('yt-player', {
-    height: '0',
-    width: '0',
-    playerVars: {
-      listType: 'playlist',
-      list: 'PLW9GcL5WxaRE',
-      autoplay: 0,
-      controls: 0,
-      rel: 0,
-      modestbranding: 1,
-      origin: window.location.origin
-    },
-    events: {
-      onReady: onYTPlayerReady,
-      onStateChange: onYTPlayerStateChange,
-      onError: onYTPlayerError
-    }
-  });
-};
-
-function onYTPlayerReady(event) {
-  ytPlayerReady = true;
-  console.log('[YouTube API] ✓ Player ready with playlist PLW9GcL5WxaRE');
-  startProgressPolling();
-  updateUIFromPlaylist();
-}
-
-let lastVideoId = '';
-
-function onYTPlayerStateChange(event) {
-  updatePlayBtnUI();
-  console.log('[YouTube API] State change:', event.data);
-
-  // When video starts playing or buffering, update track metadata UI if changed
-  if (event.data === YT.PlayerState.PLAYING || event.data === YT.PlayerState.BUFFERING) {
-    updateUIFromPlaylist();
-  }
-}
-
-function onYTPlayerError(event) {
-  console.warn('[YouTube API] Player error code:', event.data);
-  const titleEl = document.getElementById('track-title');
-  if (titleEl) {
-    titleEl.innerText = `⚠️ Track Unavailable`;
-  }
-}
 
 /* ══════════════════════════════════════════════════════════════
    PHASE 2 — Firebase Anonymous Auth + Presence
@@ -152,7 +98,7 @@ function setupPresence() {
 }
 
 /* ══════════════════════════════════════════════════════════════
-   PHASE 4 — Dynamic Playlist Ordering (frozen at session start)
+   PHASE 4 — Dynamic Playlist Ordering
    ══════════════════════════════════════════════════════════════ */
 async function buildSessionPlaylist(rawList) {
   if (firebaseReady && db) {
@@ -163,75 +109,51 @@ async function buildSessionPlaylist(rawList) {
   }
   return [...rawList].sort((a, b) => {
     const diff = (_likeCounts[b.id] || 0) - (_likeCounts[a.id] || 0);
-    return diff !== 0 ? diff : a.id - b.id; // tie → original order
+    return diff !== 0 ? diff : a.id - b.id;
   });
 }
 
 /* ══════════════════════════════════════════════════════════════
-/* ══════════════════════════════════════════════════════════════
-   PLAYLIST METADATA & UI SYNC
+   LOCAL AUDIO ENGINE CONTROLS (public/songs/)
    ══════════════════════════════════════════════════════════════ */
-function updateUIFromPlaylist() {
-  if (!ytPlayerReady || !ytPlayer || !ytPlayer.getVideoData) return;
+function playTrack(index) {
+  if (index < 0 || index >= sessionPlaylist.length) return;
+  currentIndex = index;
+  const track  = sessionPlaylist[index];
 
-  const videoData = ytPlayer.getVideoData();
-  if (!videoData || !videoData.video_id) return;
+  console.log('[Audio] Loading local song file:', track.title, '| URL:', track.url);
 
-  if (videoData.video_id === lastVideoId) return;
-  lastVideoId = videoData.video_id;
+  audio.src = track.url;
+  audio.load();
 
-  console.log('[YouTube Playlist] Playing video:', videoData.title, 'id:', videoData.video_id);
-
-  // Match with our polished local track metadata if available
-  const matched = sessionPlaylist.find(t => t.youtubeId === videoData.video_id);
-  const title  = matched ? matched.title  : (videoData.title || 'Navratri Garba Track');
-  const artist = matched ? matched.artist : (videoData.author || 'Live Radio');
-  const trackId = matched ? matched.id : 1;
-
-  const titleEl  = document.getElementById('track-title');
-  const artistEl = document.getElementById('track-artist');
-  if (titleEl)  titleEl.innerText  = title;
-  if (artistEl) artistEl.innerText = artist;
-
-  // Calculate Up Next from YT Playlist API
-  const nextEl = document.getElementById('next-up-name');
-  if (nextEl && ytPlayer.getPlaylist && ytPlayer.getPlaylistIndex) {
-    const list = ytPlayer.getPlaylist() || [];
-    const idx  = ytPlayer.getPlaylistIndex() || 0;
-    const nextVideoId = list[(idx + 1) % list.length];
-    const nextMatched = sessionPlaylist.find(t => t.youtubeId === nextVideoId);
-    if (nextMatched) {
-      nextEl.innerText = `${nextMatched.title} — ${nextMatched.artist}`;
-    } else {
-      nextEl.innerText = `Track ${((idx + 1) % list.length) + 1} in Playlist`;
-    }
+  if (hasStarted) {
+    audio.play().catch(e => console.warn('[Audio] Playback interrupted:', e));
   }
 
-  attachTrackFirebaseListeners(trackId);
+  updateNowPlayingUI(track, index);
+  attachTrackFirebaseListeners(track.id);
+  renderSchedule();
 }
 
-/* ══════════════════════════════════════════════════════════════
-   YOUTUBE ENGINE CONTROLS
-   ══════════════════════════════════════════════════════════════ */
-function playNextVideo() {
-  hasStarted = true;
-  if (ytPlayerReady && ytPlayer && ytPlayer.nextVideo) {
-    ytPlayer.nextVideo();
+function skipTo(index) {
+  playTrack(((index % sessionPlaylist.length) + sessionPlaylist.length) % sessionPlaylist.length);
+}
+
+function playNextTrack() {
+  if (isShuffle) {
+    skipTo(Math.floor(Math.random() * sessionPlaylist.length));
+  } else {
+    skipTo(currentIndex + 1);
   }
 }
 
-function playPrevVideo() {
-  hasStarted = true;
-  if (ytPlayerReady && ytPlayer && ytPlayer.previousVideo) {
-    ytPlayer.previousVideo();
-  }
+function playPrevTrack() {
+  skipTo(currentIndex - 1);
 }
 
 function skipSeconds(delta) {
-  if (!ytPlayerReady || !ytPlayer || !ytPlayer.getCurrentTime) return;
-  const cur = ytPlayer.getCurrentTime() || 0;
-  const dur = ytPlayer.getDuration() || 0;
-  ytPlayer.seekTo(Math.max(0, Math.min(dur - 0.1, cur + delta)), true);
+  if (!audio.duration) return;
+  audio.currentTime = Math.max(0, Math.min(audio.duration - 0.1, audio.currentTime + delta));
 }
 
 function togglePlayPause() {
@@ -239,21 +161,30 @@ function togglePlayPause() {
   const prompt = document.getElementById('autoplay-prompt');
   if (prompt) prompt.style.display = 'none';
 
-  if (!ytPlayerReady || !ytPlayer) return;
+  if (currentIndex < 0) {
+    skipTo(0);
+    return;
+  }
 
-  const state = ytPlayer.getPlayerState ? ytPlayer.getPlayerState() : -1;
-  if (state === YT.PlayerState.PLAYING) {
-    ytPlayer.pauseVideo();
+  if (audio.paused) {
+    audio.play().catch(e => console.warn('[Audio] Play failed:', e));
   } else {
-    ytPlayer.playVideo();
+    audio.pause();
   }
 }
 
-/* ══════════════════════════════════════════════════════════════
-   PHASE 3 — Like System
-   ══════════════════════════════════════════════════════════════ */
-let currentTrackId = 1;
+audio.addEventListener('ended', () => {
+  if (isRepeat) {
+    audio.currentTime = 0;
+    audio.play().catch(() => {});
+  } else {
+    playNextTrack();
+  }
+});
 
+/* ══════════════════════════════════════════════════════════════
+   PHASE 3 — Realtime Firebase Like System
+   ══════════════════════════════════════════════════════════════ */
 function attachTrackFirebaseListeners(trackId) {
   currentTrackId = trackId;
   if (likeUnsub)      { likeUnsub();      likeUnsub      = null; }
@@ -272,14 +203,14 @@ function attachTrackFirebaseListeners(trackId) {
   }
   likeBtn.style.opacity = '1';
 
-  // Listen for current user's like status on this active track
+  // Real-time listener for user's personal like state
   const myLikeRef = db.ref(`/likes/${trackId}/${firebaseUid}`);
   const onMyLike  = myLikeRef.on('value', snap => {
     likeBtn.classList.toggle('liked', snap.exists());
   });
   likeUnsub = () => myLikeRef.off('value', onMyLike);
 
-  // Listen for total like count on active track
+  // Real-time listener for total track like count
   const likesRef = db.ref(`/likes/${trackId}`);
   const onLikesChange = likesRef.on('value', snap => {
     const totalLikes = snap.numChildren();
@@ -291,15 +222,15 @@ function attachTrackFirebaseListeners(trackId) {
 
 async function toggleLike() {
   if (!firebaseReady || !firebaseUid || !db) {
-    console.warn('[Firebase] Like ignored: Auth or database not ready');
+    console.warn('[Firebase] Cannot toggle like: Firebase auth not ready');
     return;
   }
 
-  const trackId = currentTrackId || 1;
+  const trackId = currentTrackId || (sessionPlaylist[currentIndex]?.id) || 1;
   const likeBtn = document.getElementById('like-btn');
   const isCurrentlyLiked = likeBtn?.classList.contains('liked');
 
-  // Optimistic UI update for instantaneous visual feedback
+  // Instant optimistic UI state update
   if (likeBtn) likeBtn.classList.toggle('liked', !isCurrentlyLiked);
 
   const myRef = db.ref(`/likes/${trackId}/${firebaseUid}`);
@@ -310,7 +241,7 @@ async function toggleLike() {
       await myRef.set(true);
     }
   } catch (err) {
-    console.error('[Firebase] Like toggle failed:', err);
+    console.error('[Firebase] Like write failed:', err);
     if (likeBtn) likeBtn.classList.toggle('liked', isCurrentlyLiked); // Rollback on error
   }
 }
@@ -371,18 +302,7 @@ function renderSchedule() {
         <span class="playlist-track-duration">${formatTime(t.duration)}</span>
       </div>`;
 
-    const go = () => { 
-      hasStarted = true; 
-      if (ytPlayerReady && ytPlayer && ytPlayer.getPlaylist && ytPlayer.playVideoAt) {
-        const list = ytPlayer.getPlaylist() || [];
-        const ytIndex = list.findIndex(id => id === t.youtubeId);
-        if (ytIndex !== -1) {
-          ytPlayer.playVideoAt(ytIndex);
-        } else {
-          ytPlayer.playVideoAt(rank);
-        }
-      }
-    };
+    const go = () => { hasStarted = true; playTrack(idx); audio.play().catch(() => {}); };
     item.onclick = go;
     item.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(); } };
     container.appendChild(item);
@@ -390,7 +310,7 @@ function renderSchedule() {
 }
 
 /* ══════════════════════════════════════════════════════════════
-   UI — Now Playing + Controls
+   UI — Now Playing + Controls + Progress Bar
    ══════════════════════════════════════════════════════════════ */
 function updateNowPlayingUI(track, index) {
   const titleEl  = document.getElementById('track-title');
@@ -406,43 +326,37 @@ function updateNowPlayingUI(track, index) {
 function updatePlayBtnUI() {
   const btn = document.getElementById('play-btn');
   if (!btn) return;
-  const playing = ytPlayerReady && ytPlayer && ytPlayer.getPlayerState && ytPlayer.getPlayerState() === YT.PlayerState.PLAYING;
-  btn.innerHTML = playing
-    ? '<svg viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>'
-    : '<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>';
-  btn.setAttribute('aria-label', playing ? 'Pause' : 'Play');
+  const paused = audio.paused;
+  btn.innerHTML = paused
+    ? '<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>'
+    : '<svg viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>';
+  btn.setAttribute('aria-label', paused ? 'Play' : 'Pause');
 }
 
-function startProgressPolling() {
-  if (progressPollTimer) clearInterval(progressPollTimer);
-  progressPollTimer = setInterval(updateProgress, 500);
-}
+audio.addEventListener('play',    updatePlayBtnUI);
+audio.addEventListener('pause',   updatePlayBtnUI);
+audio.addEventListener('playing', updatePlayBtnUI);
 
 function updateProgress() {
-  if (!ytPlayerReady || !ytPlayer || !ytPlayer.getCurrentTime) return;
   const fill = document.getElementById('progress-fill-bar');
   const cur  = document.getElementById('time-current');
   const rem  = document.getElementById('time-remaining');
   const wrap = document.getElementById('player-progress-wrap');
-
-  const c = ytPlayer.getCurrentTime() || 0;
-  const d = ytPlayer.getDuration() || (sessionPlaylist[currentIndex]?.duration || 1);
+  const c = audio.currentTime || 0, d = audio.duration || 1;
   const pct = Math.min(100, (c / d) * 100);
-
   if (fill) fill.style.width = `${pct}%`;
   if (cur)  cur.innerText   = formatTime(c);
   if (rem)  rem.innerText   = `-${formatTime(Math.max(0, d - c))}`;
   if (wrap) wrap.setAttribute('aria-valuenow', Math.round(pct));
 }
+audio.addEventListener('timeupdate', updateProgress);
 
 const progressWrap = document.getElementById('player-progress-wrap');
 if (progressWrap) {
   progressWrap.addEventListener('click', e => {
-    if (!ytPlayerReady || !ytPlayer || !ytPlayer.getDuration) return;
+    if (!audio.duration) return;
     const r = progressWrap.getBoundingClientRect();
-    const d = ytPlayer.getDuration() || 1;
-    const targetSeconds = ((e.clientX - r.left) / r.width) * d;
-    ytPlayer.seekTo(targetSeconds, true);
+    audio.currentTime = ((e.clientX - r.left) / r.width) * audio.duration;
   });
 }
 
@@ -458,7 +372,7 @@ function updateListenerCount(n) {
   if (el.innerText !== newText) {
     el.innerText = newText;
     el.classList.remove('count-pop');
-    void el.offsetWidth; // trigger reflow
+    void el.offsetWidth;
     el.classList.add('count-pop');
   }
 }
@@ -470,16 +384,16 @@ function wireControls() {
   const $ = id => document.getElementById(id);
 
   $('play-btn')     ?.addEventListener('click', togglePlayPause);
-  $('btn-prev')     ?.addEventListener('click', playPrevVideo);
-  $('btn-next')     ?.addEventListener('click', playNextVideo);
-  $('btn-next-mini')?.addEventListener('click', playNextVideo);
+  $('btn-prev')     ?.addEventListener('click', playPrevTrack);
+  $('btn-next')     ?.addEventListener('click', playNextTrack);
+  $('btn-next-mini')?.addEventListener('click', playNextTrack);
   $('btn-skip-back')?.addEventListener('click', () => skipSeconds(-15));
   $('btn-skip-fwd') ?.addEventListener('click', () => skipSeconds(15));
   $('autoplay-join-btn')?.addEventListener('click', () => { 
     hasStarted = true; 
     const prompt = $('autoplay-prompt');
     if (prompt) prompt.style.display = 'none';
-    if (ytPlayer && ytPlayer.playVideo) ytPlayer.playVideo(); 
+    audio.play().catch(() => {});
   });
   $('like-btn')     ?.addEventListener('click', toggleLike);
 
@@ -489,11 +403,12 @@ function wireControls() {
   });
   $('btn-repeat')?.addEventListener('click', () => {
     isRepeat = !isRepeat;
+    audio.loop = isRepeat;
     $('btn-repeat')?.classList.toggle('active', isRepeat);
   });
 
   // Theme toggle
-  const SUN  = `<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12 7c-2.76 0-5 2.24-5 5s2.24 5 5 5 5-2.24 5-5-2.24-5-5-2.24-5-5-2.24-5-5-5zM2 13h2c.55 0 1-.45 1-1s-.45-1-1-1H2c-.55 0-1 .45-1 1s.45 1 1 1zm18 0h2c.55 0 1-.45 1-1s-.45-1-1-1h-2c-.55 0-1 .45-1 1s.45 1 1 1zM11 2v2c0 .55.45 1 1 1s1-.45 1-1V2c0-.55-.45-1-1-1s-1 .45-1 1zm0 18v2c0 .55.45 1 1 1s1-.45 1-1v-2c0-.55-.45-1-1-1s-1 .45-1 1zM5.99 4.58c-.39-.39-1.03-.39-1.41 0s-.39 1.03 0 1.41l1.06 1.06c.39.39 1.03.39 1.41 0s.39-1.03 0-1.41L5.99 4.58zm12.37 12.37c-.39-.39-1.03-.39-1.41 0s-.39 1.03 0 1.41l1.06 1.06c.39.39 1.03.39 1.41 0s.39-1.03 0-1.41l-1.06-1.06zm1.06-12.37l-1.06 1.06c-.39.39-.39 1.03 0 1.41s1.03.39 1.41 0l1.06-1.06c.39-.39.39-1.03 0-1.41s-1.03-.39-1.41 0zm-12.37 12.37l-1.06 1.06c-.39.39-.39 1.03 0 1.41s1.03.39 1.41 0l1.06-1.06c.39-.39.39-1.03 0-1.41s-1.03-.39-1.41 0z"/></svg>`;
+  const SUN  = `<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12 7c-2.76 0-5 2.24-5 5s2.24 5 5 5 5-2.24 5-5-2.24-5-5-2.24-5-5-5zM2 13h2c.55 0 1-.45 1-1s-.45-1-1-1H2c-.55 0-1 .45-1 1s.45 1 1 1zm18 0h2c.55 0 1-.45 1-1s-.45-1-1-1h-2c-.55 0-1 .45-1 1s.45 1 1 1zM11 2v2c0 .55.45 1 1 1s1-.45 1-1V2c0-.55-.45-1-1-1s-1 .45-1 1zm0 18v2c0 .55.45 1 1 1s1-.45 1-1v-2c0-.55-.45-1-1-1s-1 .45-1 1zM5.99 4.58c-.39-.39-1.03-.39-1.41 0s-.39 1.03 0 1.41l1.06 1.06c.39.39 1.03.39 1.41 0s.39-1.03 0-1.41L5.99 4.58zm12.37 12.37c-.39-.39-1.03-.39-1.41 0s-.39 1.03 0 1.41l1.06 1.06c.39.39 1.03.39 1.41 0s.39-1.03 0-1.41l-1.06-1.06zm1.06-12.37l-1.06 1.06c-.39.39-.39 1.03 0 1.41s1.03.39 1.41 0l1.06-1.06c.39-.39.39-1.03 0-1.41s-1.03-.39-1.41 0zm-12.37 12.37l-1.06 1.06c-.39.39-.39 1.03 0 1.41s1.03.39 1.41 0l1.06-1.06c.39-.39.39-1.03 0-1.41s-1.03-.39-1.41 0z"/></svg>`;
   const MOON = `<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12.3 2a10 10 0 0 0-1.9 20 10 10 0 0 0 9.6-7 1 1 0 0 0-1.2-1.2 8 8 0 1 1-8.5-10.6 1 1 0 0 0-1-1.2z"/></svg>`;
 
   function applyTheme(t) {
@@ -526,14 +441,9 @@ function wireControls() {
   document.addEventListener('keydown', e => {
     if (['INPUT','TEXTAREA','SELECT'].includes(document.activeElement.tagName)) return;
     if (e.code === 'Space')      { e.preventDefault(); togglePlayPause(); }
-    if (e.code === 'ArrowRight') { e.preventDefault(); isShuffle ? skipTo(Math.floor(Math.random() * sessionPlaylist.length)) : skipTo(currentIndex + 1); }
-    if (e.code === 'ArrowLeft')  { e.preventDefault(); skipTo(currentIndex - 1); }
-    if (e.code === 'KeyM')       { 
-      e.preventDefault(); 
-      if (ytPlayer && ytPlayer.isMuted) {
-        if (ytPlayer.isMuted()) ytPlayer.unMute(); else ytPlayer.mute();
-      }
-    }
+    if (e.code === 'ArrowRight') { e.preventDefault(); playNextTrack(); }
+    if (e.code === 'ArrowLeft')  { e.preventDefault(); playPrevTrack(); }
+    if (e.code === 'KeyM')       { e.preventDefault(); audio.muted = !audio.muted; }
   });
 }
 
@@ -555,5 +465,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   attachScheduleFirebaseListener();
   renderSchedule();
 
+  playTrack(0);
   updateListenerCount(1);
 });
