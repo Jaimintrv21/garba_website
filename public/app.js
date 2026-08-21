@@ -87,14 +87,28 @@ function safePlay() {
   return playPromise;
 }
 
+let latestServerElapsed = 0;
+
+audio.addEventListener('loadedmetadata', () => {
+  if (audio.dataset.pendingElapsed !== undefined) {
+    const targetTime = parseFloat(audio.dataset.pendingElapsed);
+    if (!isNaN(targetTime) && audio.duration) {
+      audio.currentTime = Math.min(targetTime, Math.max(0, audio.duration - 0.5));
+    }
+    delete audio.dataset.pendingElapsed;
+  }
+});
+
 function handleServerSync(data) {
   if (!data || !data.track) return;
 
   const isNewTrack = activeTrackId !== data.track.id;
+  latestServerElapsed = data.elapsed || 0;
   
   if (isNewTrack) {
     activeTrackId = data.track.id;
     audio.src = data.track.url;
+    audio.dataset.pendingElapsed = latestServerElapsed;
     if (hasUserStartedPlay) {
       safePlay();
     }
@@ -164,6 +178,12 @@ audio.addEventListener('playing', updatePlayBtnUI);
 function togglePlayPause() {
   hasUserStartedPlay = true;
   if (audio.paused) {
+    if (audio.duration && !isNaN(latestServerElapsed)) {
+      const drift = Math.abs(audio.currentTime - latestServerElapsed);
+      if (drift > 2.5) {
+        audio.currentTime = Math.min(latestServerElapsed, Math.max(0, audio.duration - 0.5));
+      }
+    }
     safePlay();
   } else {
     audio.pause();
@@ -227,8 +247,6 @@ if (btnRepeat) {
   });
 }
 
-let lastEndedTrackId = null;
-
 audio.addEventListener('ended', () => {
   if (isRepeat) {
     audio.currentTime = 0;
@@ -236,10 +254,9 @@ audio.addEventListener('ended', () => {
   } else if (isShuffle) {
     triggerTrackChange('shuffle');
   } else {
-    if (lastEndedTrackId !== activeTrackId) {
-      lastEndedTrackId = activeTrackId;
-      triggerTrackChange('next');
-    }
+    // In live radio stream mode, local audio completion should NOT trigger server track advance.
+    // Fetch latest server radio state to stay in sync.
+    fetchSyncFallback();
   }
 });
 
