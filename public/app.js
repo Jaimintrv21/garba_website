@@ -251,7 +251,10 @@ function togglePlayPause() {
 /* ══════════════════════════════════════════════════════════════
    PHASE 3 — Like System
    ══════════════════════════════════════════════════════════════ */
+let currentTrackId = 1;
+
 function attachTrackFirebaseListeners(trackId) {
+  currentTrackId = trackId;
   if (likeUnsub)      { likeUnsub();      likeUnsub      = null; }
   if (likeCountUnsub) { likeCountUnsub(); likeCountUnsub = null; }
 
@@ -286,13 +289,12 @@ function attachTrackFirebaseListeners(trackId) {
 }
 
 async function toggleLike() {
-  if (!firebaseReady || currentIndex < 0 || !firebaseUid || !db) {
+  if (!firebaseReady || !firebaseUid || !db) {
     console.warn('[Firebase] Like ignored: Auth or database not ready');
     return;
   }
-  const trackId = sessionPlaylist[currentIndex]?.id;
-  if (!trackId) return;
 
+  const trackId = currentTrackId || 1;
   const likeBtn = document.getElementById('like-btn');
   const isCurrentlyLiked = likeBtn?.classList.contains('liked');
 
