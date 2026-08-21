@@ -350,9 +350,50 @@
     </div>
   </section>
 
-  <!-- ── Footer ─────────────────────────────── -->
+  <!-- ── Background Playback First-Visit Popup Modal (Mobile) ── -->
+  <div id="bg-playback-modal" class="bg-modal-backdrop" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="bg-modal-title">
+    <div class="bg-modal-card">
+      <button id="bg-modal-close" class="bg-modal-close-btn" aria-label="Close modal">&times;</button>
+      
+      <div class="bg-modal-header">
+        <div class="bg-modal-icon-wrap">
+          <svg viewBox="0 0 24 24" width="28" height="28" fill="currentColor"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg>
+        </div>
+        <h3 id="bg-modal-title" class="bg-modal-title">Keep the music playing?</h3>
+      </div>
+      
+      <p class="bg-modal-body">
+        By default, the radio pauses when you switch apps, lock your screen, or leave this tab — this helps save your battery and data. You can turn on background listening if you'd like the music to keep playing behind the scenes.
+      </p>
+
+      <div class="bg-modal-actions">
+        <button id="btn-bg-default" class="bg-btn bg-btn-default">
+          <span class="bg-btn-primary-text">Keep default (pause when I leave)</span>
+          <span class="bg-btn-subtext">Recommended for battery &amp; data</span>
+        </button>
+        <button id="btn-bg-enable" class="bg-btn bg-btn-enable">
+          <span class="bg-btn-primary-text">Enable background listening</span>
+          <span class="bg-btn-subtext">Note: Full background playback isn't guaranteed on all phones/browsers, especially iPhone Safari, due to platform restrictions.</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Footer & Settings ─────────────────────────────── -->
   <footer>
     <div class="footer-inner">
+      <!-- Background Listening Settings Control -->
+      <div class="settings-card-inline">
+        <div class="settings-info">
+          <span class="settings-title">🎵 Background Listening</span>
+          <span class="settings-desc">Allow music to continue playing when switching apps or locking screen</span>
+        </div>
+        <label class="toggle-switch">
+          <input type="checkbox" id="bg-playback-toggle">
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+
       <div class="footer-info">
         <p>&copy; 2026 Shere Garba. Handcrafted for the Global Garba Family.</p>
         <p class="footer-contact">Created by <a href="https://github.com/Jaimintrv21" target="_blank" rel="noopener noreferrer" style="color:var(--gold-accent);font-weight:700;">Jaimintrv21</a> | <a href="https://github.com/Jaimintrv21" target="_blank" rel="noopener noreferrer">GitHub Profile</a></p>

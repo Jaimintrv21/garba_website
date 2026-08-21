@@ -137,6 +137,107 @@ function playTrack(index) {
   updateNowPlayingUI(track, index);
   attachTrackFirebaseListeners(track.id);
   renderSchedule();
+  updateMediaSession(track);
+}
+
+/* ══════════════════════════════════════════════════════════════
+   BACKGROUND PLAYBACK PREFERENCE & MEDIA SESSION API
+   ══════════════════════════════════════════════════════════════ */
+function updateMediaSession(track) {
+  if (!('mediaSession' in navigator) || !track) return;
+  try {
+    navigator.mediaSession.metadata = new MediaMetadata({
+      title: track.title || 'Shere Garba Track',
+      artist: track.artist || 'Traditional Garba',
+      album: 'Shere Garba Radio',
+      artwork: [
+        { src: '/images/og-banner.jpg', sizes: '512x512', type: 'image/jpeg' }
+      ]
+    });
+    navigator.mediaSession.setActionHandler('play', () => {
+      hasStarted = true;
+      audio.play().catch(() => {});
+    });
+    navigator.mediaSession.setActionHandler('pause', () => {
+      audio.pause();
+    });
+    navigator.mediaSession.setActionHandler('previoustrack', () => {
+      playPrevTrack();
+    });
+    navigator.mediaSession.setActionHandler('nexttrack', () => {
+      playNextTrack();
+    });
+  } catch (e) {
+    console.warn('[MediaSession] Failed to set metadata/handlers:', e);
+  }
+}
+
+// Page visibility change handler
+document.addEventListener('visibilitychange', () => {
+  const pref = localStorage.getItem('bgPlaybackPref');
+  if (document.hidden) {
+    // Default behavior — pause when user leaves tab/app unless explicitly enabled
+    if (pref === 'false' || pref === null) {
+      if (!audio.paused) {
+        audio.pause();
+      }
+    }
+  } else {
+    // Resync UI when returning to tab
+    const currentTrack = sessionPlaylist[currentIndex];
+    if (currentTrack) {
+      updateNowPlayingUI(currentTrack, currentIndex);
+    }
+  }
+});
+
+// Detect mobile device
+function isMobileDevice() {
+  if (navigator.userAgentData && typeof navigator.userAgentData.mobile === 'boolean') {
+    return navigator.userAgentData.mobile;
+  }
+  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobi/i.test(navigator.userAgent) || window.innerWidth <= 650;
+}
+
+// Init Background Playback Popup & Settings Toggle
+function initBgPlaybackSystem() {
+  const modal = document.getElementById('bg-playback-modal');
+  const btnDefault = document.getElementById('btn-bg-default');
+  const btnEnable = document.getElementById('btn-bg-enable');
+  const btnClose = document.getElementById('bg-modal-close');
+  const toggleInput = document.getElementById('bg-playback-toggle');
+
+  const currentPref = localStorage.getItem('bgPlaybackPref');
+
+  // Sync settings checkbox UI
+  if (toggleInput) {
+    toggleInput.checked = (currentPref === 'true');
+    toggleInput.addEventListener('change', (e) => {
+      const isEnabled = e.target.checked;
+      localStorage.setItem('bgPlaybackPref', isEnabled ? 'true' : 'false');
+      if (isEnabled && sessionPlaylist[currentIndex]) {
+        updateMediaSession(sessionPlaylist[currentIndex]);
+      }
+    });
+  }
+
+  // Show modal only on mobile devices on first visit (when no pref is saved)
+  if (isMobileDevice() && currentPref === null && modal) {
+    modal.style.display = 'flex';
+  }
+
+  const savePrefAndClose = (isEnabled) => {
+    localStorage.setItem('bgPlaybackPref', isEnabled ? 'true' : 'false');
+    if (toggleInput) toggleInput.checked = isEnabled;
+    if (isEnabled && sessionPlaylist[currentIndex]) {
+      updateMediaSession(sessionPlaylist[currentIndex]);
+    }
+    if (modal) modal.style.display = 'none';
+  };
+
+  btnDefault?.addEventListener('click', () => savePrefAndClose(false));
+  btnEnable?.addEventListener('click', () => savePrefAndClose(true));
+  btnClose?.addEventListener('click', () => savePrefAndClose(false));
 }
 
 function skipTo(index) {
@@ -525,6 +626,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   sessionPlaylist = await buildSessionPlaylist(rawPlaylist);
 
   playTrack(0);
+  initBgPlaybackSystem();
 
   await initFirebase();
 

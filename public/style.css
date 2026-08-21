@@ -266,7 +266,7 @@ body[data-theme="night"] .header-container {
   transform: rotate(20deg) scale(1.15);
 }
 
-/* Active Tab State (Refined Premium Gold Glow) */
+/* Active Tab State (High-Contrast Golden Capsule Pill Highlight) */
 .nav-link:hover {
   color: var(--gold-accent);
   transform: translateY(-1px);
@@ -275,13 +275,28 @@ body[data-theme="night"] .header-container {
 .nav-link.active {
   color: var(--gold-accent);
   font-weight: 800;
+  background: rgba(255, 180, 40, 0.16) !important;
+  border: 1.5px solid rgba(255, 200, 55, 0.75) !important;
+  box-shadow: 
+    inset 0 1px 2px rgba(255, 255, 255, 0.5),
+    0 0 14px rgba(255, 180, 40, 0.35) !important;
+}
+
+:root[data-theme="night"] .nav-link.active,
+html[data-theme="night"] .nav-link.active,
+body[data-theme="night"] .nav-link.active {
+  background: rgba(255, 180, 40, 0.22) !important;
+  border: 1.5px solid rgba(255, 200, 55, 0.85) !important;
+  box-shadow: 
+    inset 0 1px 2px rgba(255, 255, 255, 0.4),
+    0 0 18px rgba(255, 180, 40, 0.45) !important;
 }
 
 .nav-link.active svg {
   fill: var(--gold-accent);
   opacity: 1;
   transform: scale(1.1);
-  filter: drop-shadow(0 0 6px rgba(255, 180, 40, 0.45));
+  filter: drop-shadow(0 0 6px rgba(255, 180, 40, 0.6));
 }
 
 .header-actions {
@@ -454,20 +469,17 @@ body[data-theme="night"] .header-container {
   }
 
   /* Active Tab Highlight (Clear Gold Pill Highlight) */
-  .nav-link:hover, .nav-link.active {
-    background: transparent;
-    border: none;
-    box-shadow: none;
+  .nav-link:hover {
     color: var(--gold-accent);
   }
 
-  :root[data-theme="night"] .nav-link.active,
-  html[data-theme="night"] .nav-link.active,
-  body[data-theme="night"] .nav-link.active {
+  .nav-link.active {
     color: var(--gold-accent);
-    background: transparent;
-    border: none;
-    box-shadow: none;
+    background: rgba(255, 180, 40, 0.2) !important;
+    border: 1.5px solid rgba(255, 200, 55, 0.8) !important;
+    box-shadow: 
+      inset 0 1px 2px rgba(255, 255, 255, 0.4),
+      0 0 14px rgba(255, 180, 40, 0.4) !important;
   }
 
   .nav-link.active span {
@@ -478,7 +490,7 @@ body[data-theme="night"] .header-container {
     fill: var(--gold-accent);
     opacity: 1;
     transform: scale(1.12);
-    filter: drop-shadow(0 0 6px rgba(255, 180, 40, 0.5));
+    filter: drop-shadow(0 0 6px rgba(255, 180, 40, 0.6));
   }
 
   .theme-nav-link span {
@@ -1645,7 +1657,256 @@ button:focus-visible,
   background: linear-gradient(90deg, #ff4569, #ff8c42);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
-  margin-right: 2px;
+  text-transform: uppercase;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   BACKGROUND PLAYBACK FIRST-VISIT POPUP MODAL & SETTINGS TOGGLE
+   ══════════════════════════════════════════════════════════════ */
+.bg-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.2rem;
+  animation: bgModalFadeIn 0.3s var(--ease);
+}
+
+@keyframes bgModalFadeIn {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.bg-modal-card {
+  position: relative;
+  width: min(440px, 100%);
+  border-radius: 32px;
+  padding: 1.6rem 1.4rem;
+  background: rgba(255, 255, 255, 0.28);
+  backdrop-filter: blur(60px) saturate(240%) brightness(115%);
+  -webkit-backdrop-filter: blur(60px) saturate(240%) brightness(115%);
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  border-top: 1.5px solid rgba(255, 255, 255, 0.8);
+  box-shadow: 
+    inset 0 2px 4px rgba(255, 255, 255, 0.6),
+    0 24px 60px rgba(0, 0, 0, 0.5),
+    0 0 35px rgba(255, 180, 40, 0.3);
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+}
+
+:root[data-theme="night"] .bg-modal-card,
+html[data-theme="night"] .bg-modal-card,
+body[data-theme="night"] .bg-modal-card {
+  background: linear-gradient(135deg, rgba(32, 12, 24, 0.96) 0%, rgba(18, 6, 14, 0.98) 100%);
+  border: 1px solid rgba(255, 200, 55, 0.4);
+  border-top: 1.5px solid rgba(255, 255, 255, 0.6);
+  box-shadow: 
+    inset 0 2px 4px rgba(255, 255, 255, 0.35),
+    0 28px 70px rgba(0, 0, 0, 0.9),
+    0 0 45px rgba(255, 160, 0, 0.35);
+}
+
+.bg-modal-close-btn {
+  position: absolute;
+  top: 1.1rem;
+  right: 1.2rem;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--text-main);
+  font-size: 1.2rem;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s var(--ease);
+}
+
+.bg-modal-close-btn:hover {
+  background: rgba(255, 255, 255, 0.25);
+  transform: scale(1.08);
+}
+
+.bg-modal-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.bg-modal-icon-wrap {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: rgba(255, 200, 55, 0.2);
+  border: 1px solid rgba(255, 200, 55, 0.5);
+  color: var(--gold-accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 0 16px rgba(255, 180, 40, 0.3);
+}
+
+.bg-modal-title {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--text-main);
+  margin: 0;
+  line-height: 1.2;
+}
+
+.bg-modal-body {
+  font-size: 0.88rem;
+  line-height: 1.45;
+  color: var(--text-sub);
+  margin: 0;
+}
+
+.bg-modal-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 0.3rem;
+}
+
+.bg-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  padding: 0.75rem 1rem;
+  border-radius: 20px;
+  cursor: pointer;
+  text-align: left;
+  transition: transform 0.2s var(--spring), box-shadow 0.2s var(--ease);
+}
+
+.bg-btn:active {
+  transform: scale(0.98);
+}
+
+.bg-btn-default {
+  background: rgba(255, 200, 55, 0.25);
+  border: 1.5px solid rgba(255, 200, 55, 0.75);
+  color: var(--text-main);
+  box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.4), 0 4px 14px rgba(255, 180, 40, 0.2);
+}
+
+.bg-btn-enable {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  color: var(--text-main);
+}
+
+.bg-btn-primary-text {
+  font-size: 0.92rem;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.bg-btn-subtext {
+  font-size: 0.72rem;
+  font-weight: 500;
+  line-height: 1.3;
+  opacity: 0.75;
+}
+
+/* Settings Inline Card in Footer */
+.settings-card-inline {
+  width: 100%;
+  max-width: 520px;
+  margin: 0 auto 1.4rem auto;
+  padding: 0.9rem 1.2rem;
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.14);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  text-align: left;
+}
+
+:root[data-theme="night"] .settings-card-inline,
+html[data-theme="night"] .settings-card-inline,
+body[data-theme="night"] .settings-card-inline {
+  background: rgba(30, 12, 24, 0.6);
+  border: 1px solid rgba(255, 200, 55, 0.25);
+}
+
+.settings-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.settings-title {
+  font-size: 0.88rem;
+  font-weight: 800;
+  color: var(--text-main);
+}
+
+.settings-desc {
+  font-size: 0.72rem;
+  color: var(--text-sub);
+}
+
+/* Custom iOS/Android Toggle Switch */
+.toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 46px;
+  height: 26px;
+  flex-shrink: 0;
+}
+
+.toggle-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.toggle-slider {
+  position: absolute;
+  cursor: pointer;
+  inset: 0;
+  background-color: rgba(255, 255, 255, 0.25);
+  transition: .3s var(--ease);
+  border-radius: 34px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.toggle-slider:before {
+  position: absolute;
+  content: "";
+  height: 20px;
+  width: 20px;
+  left: 2px;
+  bottom: 2px;
+  background-color: white;
+  transition: .3s var(--spring);
+  border-radius: 50%;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+
+input:checked + .toggle-slider {
+  background-color: var(--gold-accent);
+  border-color: rgba(255, 200, 55, 0.8);
+}
+
+input:checked + .toggle-slider:before {
+  transform: translateX(20px);
 }
 
 .now-playing-label {
