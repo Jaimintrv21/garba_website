@@ -48,6 +48,8 @@ window.onYouTubeIframeAPIReady = function() {
   });
 };
 
+let isAdvancing = false;
+
 function onYTPlayerReady(event) {
   ytPlayerReady = true;
   console.log('[YouTube API] ✓ Player ready');
@@ -59,7 +61,13 @@ function onYTPlayerReady(event) {
 
 function onYTPlayerStateChange(event) {
   updatePlayBtnUI();
+  console.log('[YouTube API] State change:', event.data);
+
   if (event.data === YT.PlayerState.ENDED) {
+    if (isAdvancing) return;
+    isAdvancing = true;
+    setTimeout(() => { isAdvancing = false; }, 1000);
+
     if (isRepeat) {
       if (ytPlayer && ytPlayer.playVideo) ytPlayer.playVideo();
     } else if (isShuffle) {
@@ -71,9 +79,12 @@ function onYTPlayerStateChange(event) {
 }
 
 function onYTPlayerError(event) {
-  console.warn('[YouTube API] Player error code:', event.data, 'for track:', sessionPlaylist[currentIndex]);
-  // Auto-skip on broken/restricted video ID
-  skipTo(currentIndex + 1);
+  console.warn('[YouTube API] Player error code:', event.data, 'for track:', sessionPlaylist[currentIndex]?.title, 'videoId:', sessionPlaylist[currentIndex]?.youtubeId);
+  const titleEl = document.getElementById('track-title');
+  if (titleEl && sessionPlaylist[currentIndex]) {
+    titleEl.innerText = `⚠️ ${sessionPlaylist[currentIndex].title} (Unavailable)`;
+  }
+  // Prevent rapid auto-skip loops on bad YouTube IDs
 }
 
 /* ══════════════════════════════════════════════════════════════
@@ -108,6 +119,10 @@ async function initFirebase() {
           firebaseUid = user.uid;
           firebaseReady = true;
           console.log('[Firebase] ✓ uid:', firebaseUid);
+          
+          const likeBtn = document.getElementById('like-btn');
+          if (likeBtn) likeBtn.style.opacity = '1';
+
           setupPresence();
           attachScheduleFirebaseListener();
           if (currentIndex >= 0 && sessionPlaylist[currentIndex]) {
@@ -190,6 +205,9 @@ function playTrack(index) {
 }
 
 function skipTo(index) {
+  if (isAdvancing) return;
+  isAdvancing = true;
+  setTimeout(() => { isAdvancing = false; }, 800);
   playTrack(((index % sessionPlaylist.length) + sessionPlaylist.length) % sessionPlaylist.length);
 }
 
@@ -234,7 +252,11 @@ function attachTrackFirebaseListeners(trackId) {
   likeBtn.classList.remove('liked');
   likeCount.textContent = _likeCounts[trackId] || 0;
 
-  if (!firebaseReady || !db || !firebaseUid) return;
+  if (!firebaseReady || !db || !firebaseUid) {
+    likeBtn.style.opacity = '0.5';
+    return;
+  }
+  likeBtn.style.opacity = '1';
 
   const myLikeRef = db.ref(`/likes/${trackId}/${firebaseUid}`);
   const onMyLike  = myLikeRef.on('value', snap => likeBtn.classList.toggle('liked', snap.exists()));
@@ -250,8 +272,9 @@ function attachTrackFirebaseListeners(trackId) {
 }
 
 async function toggleLike() {
+  console.log('[Like Button] Clicked. firebaseReady:', firebaseReady, 'uid:', firebaseUid, 'currentIndex:', currentIndex);
   if (!firebaseReady || currentIndex < 0 || !firebaseUid || !db) {
-    console.warn('[Firebase] Cannot toggle like: Firebase is not ready or user is not logged in');
+    console.warn('[Firebase] Cannot toggle like: Firebase authentication is not ready');
     return;
   }
   const trackId = sessionPlaylist[currentIndex].id;
