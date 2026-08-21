@@ -27,14 +27,15 @@ let likeCountUnsub = null;     // Detach current-track count listener
 let scheduleCountUnsub = null; // Detach schedule-wide count listener
 
 /* ══════════════════════════════════════════════════════════════
-   YOUTUBE IFRAME API INITIALIZATION
+   YOUTUBE IFRAME PLAYLIST INITIALIZATION
    ══════════════════════════════════════════════════════════════ */
 window.onYouTubeIframeAPIReady = function() {
   ytPlayer = new YT.Player('yt-player', {
     height: '0',
     width: '0',
-    videoId: '',
     playerVars: {
+      listType: 'playlist',
+      list: 'PLW9GcL5WxaRE',
       autoplay: 0,
       controls: 0,
       rel: 0,
@@ -48,43 +49,31 @@ window.onYouTubeIframeAPIReady = function() {
   });
 };
 
-let isAdvancing = false;
-
 function onYTPlayerReady(event) {
   ytPlayerReady = true;
-  console.log('[YouTube API] ✓ Player ready');
+  console.log('[YouTube API] ✓ Player ready with playlist PLW9GcL5WxaRE');
   startProgressPolling();
-  if (currentIndex >= 0 && sessionPlaylist[currentIndex]) {
-    loadTrackIntoYT(currentIndex, false);
-  }
+  updateUIFromPlaylist();
 }
+
+let lastVideoId = '';
 
 function onYTPlayerStateChange(event) {
   updatePlayBtnUI();
   console.log('[YouTube API] State change:', event.data);
 
-  if (event.data === YT.PlayerState.ENDED) {
-    if (isAdvancing) return;
-    isAdvancing = true;
-    setTimeout(() => { isAdvancing = false; }, 1000);
-
-    if (isRepeat) {
-      if (ytPlayer && ytPlayer.playVideo) ytPlayer.playVideo();
-    } else if (isShuffle) {
-      skipTo(Math.floor(Math.random() * sessionPlaylist.length));
-    } else {
-      skipTo(currentIndex + 1);
-    }
+  // When video starts playing or buffering, update track metadata UI if changed
+  if (event.data === YT.PlayerState.PLAYING || event.data === YT.PlayerState.BUFFERING) {
+    updateUIFromPlaylist();
   }
 }
 
 function onYTPlayerError(event) {
-  console.warn('[YouTube API] Player error code:', event.data, 'for track:', sessionPlaylist[currentIndex]?.title, 'videoId:', sessionPlaylist[currentIndex]?.youtubeId);
+  console.warn('[YouTube API] Player error code:', event.data);
   const titleEl = document.getElementById('track-title');
-  if (titleEl && sessionPlaylist[currentIndex]) {
-    titleEl.innerText = `⚠️ ${sessionPlaylist[currentIndex].title} (Unavailable)`;
+  if (titleEl) {
+    titleEl.innerText = `⚠️ Track Unavailable`;
   }
-  // Prevent rapid auto-skip loops on bad YouTube IDs
 }
 
 /* ══════════════════════════════════════════════════════════════
@@ -178,37 +167,63 @@ async function buildSessionPlaylist(rawList) {
 }
 
 /* ══════════════════════════════════════════════════════════════
-   YOUTUBE ENGINE CONTROLS
+/* ══════════════════════════════════════════════════════════════
+   PLAYLIST METADATA & UI SYNC
    ══════════════════════════════════════════════════════════════ */
-function loadTrackIntoYT(index, shouldPlay = true) {
-  if (index < 0 || index >= sessionPlaylist.length) return;
-  currentIndex = index;
-  const track = sessionPlaylist[index];
+function updateUIFromPlaylist() {
+  if (!ytPlayerReady || !ytPlayer || !ytPlayer.getVideoData) return;
 
-  console.log('[YouTube API] Loading track:', track.title, '| videoId:', track.youtubeId);
+  const videoData = ytPlayer.getVideoData();
+  if (!videoData || !videoData.video_id) return;
 
-  if (ytPlayerReady && ytPlayer) {
-    if (shouldPlay) {
-      ytPlayer.loadVideoById(track.youtubeId);
+  if (videoData.video_id === lastVideoId) return;
+  lastVideoId = videoData.video_id;
+
+  console.log('[YouTube Playlist] Playing video:', videoData.title, 'id:', videoData.video_id);
+
+  // Match with our polished local track metadata if available
+  const matched = sessionPlaylist.find(t => t.youtubeId === videoData.video_id);
+  const title  = matched ? matched.title  : (videoData.title || 'Navratri Garba Track');
+  const artist = matched ? matched.artist : (videoData.author || 'Live Radio');
+  const trackId = matched ? matched.id : 1;
+
+  const titleEl  = document.getElementById('track-title');
+  const artistEl = document.getElementById('track-artist');
+  if (titleEl)  titleEl.innerText  = title;
+  if (artistEl) artistEl.innerText = artist;
+
+  // Calculate Up Next from YT Playlist API
+  const nextEl = document.getElementById('next-up-name');
+  if (nextEl && ytPlayer.getPlaylist && ytPlayer.getPlaylistIndex) {
+    const list = ytPlayer.getPlaylist() || [];
+    const idx  = ytPlayer.getPlaylistIndex() || 0;
+    const nextVideoId = list[(idx + 1) % list.length];
+    const nextMatched = sessionPlaylist.find(t => t.youtubeId === nextVideoId);
+    if (nextMatched) {
+      nextEl.innerText = `${nextMatched.title} — ${nextMatched.artist}`;
     } else {
-      ytPlayer.cueVideoById(track.youtubeId);
+      nextEl.innerText = `Track ${((idx + 1) % list.length) + 1} in Playlist`;
     }
   }
 
-  updateNowPlayingUI(track, index);
-  attachTrackFirebaseListeners(track.id); // Phase 3
-  renderSchedule();                       // Phase 5
+  attachTrackFirebaseListeners(trackId);
 }
 
-function playTrack(index) {
-  loadTrackIntoYT(index, hasStarted);
+/* ══════════════════════════════════════════════════════════════
+   YOUTUBE ENGINE CONTROLS
+   ══════════════════════════════════════════════════════════════ */
+function playNextVideo() {
+  hasStarted = true;
+  if (ytPlayerReady && ytPlayer && ytPlayer.nextVideo) {
+    ytPlayer.nextVideo();
+  }
 }
 
-function skipTo(index) {
-  if (isAdvancing) return;
-  isAdvancing = true;
-  setTimeout(() => { isAdvancing = false; }, 800);
-  playTrack(((index % sessionPlaylist.length) + sessionPlaylist.length) % sessionPlaylist.length);
+function playPrevVideo() {
+  hasStarted = true;
+  if (ytPlayerReady && ytPlayer && ytPlayer.previousVideo) {
+    ytPlayer.previousVideo();
+  }
 }
 
 function skipSeconds(delta) {
@@ -224,11 +239,6 @@ function togglePlayPause() {
   if (prompt) prompt.style.display = 'none';
 
   if (!ytPlayerReady || !ytPlayer) return;
-  
-  if (currentIndex < 0) {
-    skipTo(0);
-    return;
-  }
 
   const state = ytPlayer.getPlayerState ? ytPlayer.getPlayerState() : -1;
   if (state === YT.PlayerState.PLAYING) {
@@ -258,10 +268,14 @@ function attachTrackFirebaseListeners(trackId) {
   }
   likeBtn.style.opacity = '1';
 
+  // Listen for current user's like status on this active track
   const myLikeRef = db.ref(`/likes/${trackId}/${firebaseUid}`);
-  const onMyLike  = myLikeRef.on('value', snap => likeBtn.classList.toggle('liked', snap.exists()));
+  const onMyLike  = myLikeRef.on('value', snap => {
+    likeBtn.classList.toggle('liked', snap.exists());
+  });
   likeUnsub = () => myLikeRef.off('value', onMyLike);
 
+  // Listen for total like count on active track
   const likesRef = db.ref(`/likes/${trackId}`);
   const onLikesChange = likesRef.on('value', snap => {
     const totalLikes = snap.numChildren();
@@ -272,19 +286,29 @@ function attachTrackFirebaseListeners(trackId) {
 }
 
 async function toggleLike() {
-  console.log('[Like Button] Clicked. firebaseReady:', firebaseReady, 'uid:', firebaseUid, 'currentIndex:', currentIndex);
   if (!firebaseReady || currentIndex < 0 || !firebaseUid || !db) {
-    console.warn('[Firebase] Cannot toggle like: Firebase authentication is not ready');
+    console.warn('[Firebase] Like ignored: Auth or database not ready');
     return;
   }
-  const trackId = sessionPlaylist[currentIndex].id;
-  const myRef   = db.ref(`/likes/${trackId}/${firebaseUid}`);
-  const snap    = await myRef.once('value');
-  
-  if (snap.exists()) {
-    await myRef.remove();
-  } else {
-    await myRef.set(true);
+  const trackId = sessionPlaylist[currentIndex]?.id;
+  if (!trackId) return;
+
+  const likeBtn = document.getElementById('like-btn');
+  const isCurrentlyLiked = likeBtn?.classList.contains('liked');
+
+  // Optimistic UI update for instantaneous visual feedback
+  if (likeBtn) likeBtn.classList.toggle('liked', !isCurrentlyLiked);
+
+  const myRef = db.ref(`/likes/${trackId}/${firebaseUid}`);
+  try {
+    if (isCurrentlyLiked) {
+      await myRef.remove();
+    } else {
+      await myRef.set(true);
+    }
+  } catch (err) {
+    console.error('[Firebase] Like toggle failed:', err);
+    if (likeBtn) likeBtn.classList.toggle('liked', isCurrentlyLiked); // Rollback on error
   }
 }
 
@@ -344,7 +368,18 @@ function renderSchedule() {
         <span class="playlist-track-duration">${formatTime(t.duration)}</span>
       </div>`;
 
-    const go = () => { hasStarted = true; skipTo(idx); if (ytPlayer && ytPlayer.playVideo) ytPlayer.playVideo(); };
+    const go = () => { 
+      hasStarted = true; 
+      if (ytPlayerReady && ytPlayer && ytPlayer.getPlaylist && ytPlayer.playVideoAt) {
+        const list = ytPlayer.getPlaylist() || [];
+        const ytIndex = list.findIndex(id => id === t.youtubeId);
+        if (ytIndex !== -1) {
+          ytPlayer.playVideoAt(ytIndex);
+        } else {
+          ytPlayer.playVideoAt(rank);
+        }
+      }
+    };
     item.onclick = go;
     item.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(); } };
     container.appendChild(item);
@@ -432,9 +467,9 @@ function wireControls() {
   const $ = id => document.getElementById(id);
 
   $('play-btn')     ?.addEventListener('click', togglePlayPause);
-  $('btn-prev')     ?.addEventListener('click', () => skipTo(currentIndex - 1));
-  $('btn-next')     ?.addEventListener('click', () => skipTo(currentIndex + 1));
-  $('btn-next-mini')?.addEventListener('click', () => skipTo(currentIndex + 1));
+  $('btn-prev')     ?.addEventListener('click', playPrevVideo);
+  $('btn-next')     ?.addEventListener('click', playNextVideo);
+  $('btn-next-mini')?.addEventListener('click', playNextVideo);
   $('btn-skip-back')?.addEventListener('click', () => skipSeconds(-15));
   $('btn-skip-fwd') ?.addEventListener('click', () => skipSeconds(15));
   $('autoplay-join-btn')?.addEventListener('click', () => { 
