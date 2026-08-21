@@ -76,10 +76,13 @@ async function initFirebase() {
         }
       });
 
-      firebase.auth().signInAnonymously().catch(e => {
-        console.warn('[Firebase] Anon auth failed:', e.message);
-        resolve();
-      });
+      console.log('[Firebase] Requesting anonymous sign-in...');
+      firebase.auth().signInAnonymously()
+        .then(() => console.log('[Firebase] signInAnonymously request sent'))
+        .catch(e => {
+          console.error('[Firebase] Anonymous sign-in FAILED:', e);
+          resolve();
+        });
     });
   } catch (e) {
     console.error('[Firebase] Initialization FAILED:', e);
