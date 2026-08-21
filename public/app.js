@@ -225,6 +225,7 @@ function attachTrackFirebaseListeners(trackId) {
   const likesRef = db.ref(`/likes/${trackId}`);
   const onLikesChange = likesRef.on('value', snap => {
     const totalLikes = snap.numChildren();
+    _likeCounts[trackId] = totalLikes;
     likeCount.textContent = totalLikes;
     db.ref(`/likeCounts/${trackId}`).set(totalLikes);
   });
@@ -245,10 +246,23 @@ async function toggleLike() {
 
   const trackId = currentTrackId || (sessionPlaylist[currentIndex]?.id) || 1;
   const likeBtn = document.getElementById('like-btn');
+  const likeCountEl = document.getElementById('like-count');
   const isCurrentlyLiked = likeBtn?.classList.contains('liked');
+  const nextLiked = !isCurrentlyLiked;
 
-  // Instant optimistic UI state update
-  if (likeBtn) likeBtn.classList.toggle('liked', !isCurrentlyLiked);
+  // 1. Instant optimistic UI update for player button
+  if (likeBtn) likeBtn.classList.toggle('liked', nextLiked);
+
+  // 2. Instant optimistic update for current track like count & Schedule live counts
+  const currentCount = parseInt(likeCountEl?.textContent || '0', 10);
+  const newCount = Math.max(0, currentCount + (nextLiked ? 1 : -1));
+  
+  if (likeCountEl) likeCountEl.textContent = newCount;
+  _likeCounts[trackId] = newCount;
+  scheduleLiveCounts[trackId] = newCount;
+
+  // 3. Instant sync to Live Broadcast Schedule UI
+  renderSchedule();
 
   const myRef = db.ref(`/likes/${trackId}/${firebaseUid}`);
   try {
@@ -259,7 +273,12 @@ async function toggleLike() {
     }
   } catch (err) {
     console.error('[Firebase] Like write failed:', err);
-    if (likeBtn) likeBtn.classList.toggle('liked', isCurrentlyLiked); // Rollback on error
+    // Rollback on error
+    if (likeBtn) likeBtn.classList.toggle('liked', isCurrentlyLiked);
+    if (likeCountEl) likeCountEl.textContent = currentCount;
+    _likeCounts[trackId] = currentCount;
+    scheduleLiveCounts[trackId] = currentCount;
+    renderSchedule();
   }
 }
 
