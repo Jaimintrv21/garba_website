@@ -9,6 +9,10 @@ let currentListenersCount = 0;
 let playlistData = [];
 let activeTrackId = null;
 let hasUserStartedPlay = false;
+let playPromise = null;
+let lastControlTime = 0;
+let heartbeatInterval = null;
+let eventSource = null;
 
 audio.preload = 'auto';
 
@@ -24,7 +28,12 @@ function initSession() {
 // --- REAL-TIME SSE SYNC ---------------------------------------
 function initSSE() {
   initSession();
-  const eventSource = new EventSource('/api/stream');
+  
+  if (eventSource) {
+    eventSource.close();
+  }
+
+  eventSource = new EventSource('/api/stream');
 
   eventSource.onmessage = (event) => {
     try {
@@ -59,6 +68,25 @@ function fetchSyncFallback() {
     .catch(err => console.error('Fallback sync error:', err));
 }
 
+function safePlay() {
+  const promptEl = document.getElementById('autoplay-prompt');
+  
+  playPromise = audio.play();
+  if (playPromise !== undefined) {
+    playPromise
+      .then(() => {
+        if (promptEl) promptEl.style.display = 'none';
+      })
+      .catch(e => {
+        console.log('Autoplay status:', e.message);
+        if (e.name === 'NotAllowedError' && promptEl) {
+          promptEl.style.display = 'flex';
+        }
+      });
+  }
+  return playPromise;
+}
+
 function handleServerSync(data) {
   if (!data || !data.track) return;
 
@@ -68,7 +96,7 @@ function handleServerSync(data) {
     activeTrackId = data.track.id;
     audio.src = data.track.url;
     if (hasUserStartedPlay) {
-      audio.play().catch(e => console.log('Autoplay deferred:', e));
+      safePlay();
     }
   }
 
@@ -94,8 +122,16 @@ function sendHeartbeat() {
 
 function startHeartbeat() {
   sendHeartbeat();
-  setInterval(sendHeartbeat, 10000);
+  if (heartbeatInterval) clearInterval(heartbeatInterval);
+  heartbeatInterval = setInterval(sendHeartbeat, 10000);
 }
+
+// Page Visibility API Resync
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') {
+    fetchSyncFallback();
+  }
+});
 
 // --- PLAY / PAUSE BUTTON & EVENT SYNCHRONIZATION ------------------
 const playBtn = document.getElementById('play-btn');
@@ -104,17 +140,20 @@ const btnNext = document.getElementById('btn-next');
 const btnNextMini = document.getElementById('btn-next-mini');
 const btnShuffle = document.getElementById('btn-shuffle');
 const btnRepeat = document.getElementById('btn-repeat');
+const autoplayJoinBtn = document.getElementById('autoplay-join-btn');
 
 function updatePlayBtnUI() {
   if (!playBtn) return;
   if (!audio.paused) {
     playBtn.classList.add('playing');
     playBtn.setAttribute('title', 'Pause');
-    playBtn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>';
+    playBtn.setAttribute('aria-label', 'Pause');
+    playBtn.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>';
   } else {
     playBtn.classList.remove('playing');
     playBtn.setAttribute('title', 'Play');
-    playBtn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>';
+    playBtn.setAttribute('aria-label', 'Play');
+    playBtn.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>';
   }
 }
 
@@ -125,7 +164,7 @@ audio.addEventListener('playing', updatePlayBtnUI);
 function togglePlayPause() {
   hasUserStartedPlay = true;
   if (audio.paused) {
-    audio.play().catch(err => console.error('Audio play error:', err));
+    safePlay();
   } else {
     audio.pause();
   }
@@ -133,11 +172,21 @@ function togglePlayPause() {
 }
 
 if (playBtn) playBtn.addEventListener('click', togglePlayPause);
+if (autoplayJoinBtn) {
+  autoplayJoinBtn.addEventListener('click', () => {
+    hasUserStartedPlay = true;
+    safePlay();
+  });
+}
 
 let isShuffle = false;
 let isRepeat = false;
 
 function triggerTrackChange(action) {
+  const now = Date.now();
+  if (now - lastControlTime < 250) return; // Debounce rapid clicks
+  lastControlTime = now;
+
   hasUserStartedPlay = true;
   fetch('/api/control', {
     method: 'POST',
@@ -148,7 +197,7 @@ function triggerTrackChange(action) {
   .then(data => {
     if (data.track) {
       handleServerSync(data);
-      audio.play().catch(() => {});
+      safePlay();
     }
   })
   .catch(console.error);
@@ -183,7 +232,7 @@ let lastEndedTrackId = null;
 audio.addEventListener('ended', () => {
   if (isRepeat) {
     audio.currentTime = 0;
-    audio.play().catch(() => {});
+    safePlay();
   } else if (isShuffle) {
     triggerTrackChange('shuffle');
   } else {
@@ -209,6 +258,10 @@ function updateProgress() {
   if (progressFill) progressFill.style.width = `${pct}%`;
   if (timeCurrent) timeCurrent.innerText = formatTime(cur);
   if (timeRemaining) timeRemaining.innerText = `-${formatTime(rem)}`;
+
+  if (progressWrap) {
+    progressWrap.setAttribute('aria-valuenow', Math.round(pct));
+  }
 }
 
 audio.addEventListener('timeupdate', updateProgress);
@@ -233,12 +286,16 @@ function formatTime(secs) {
 }
 
 // Listener Count Roll
+let listenerUpdateTimeout = null;
+
 function setListenerCount(newCount) {
   const countEl = document.getElementById('listeners-count');
   if (!countEl || currentListenersCount === newCount) return;
 
+  if (listenerUpdateTimeout) clearTimeout(listenerUpdateTimeout);
+
   countEl.style.transform = 'scale(1.1)';
-  setTimeout(() => {
+  listenerUpdateTimeout = setTimeout(() => {
     currentListenersCount = newCount;
     countEl.innerText = `${newCount} dancing right now`;
     countEl.style.transform = 'scale(1)';
@@ -272,7 +329,10 @@ function renderPlaylistTable() {
     const item = document.createElement('div');
     item.className = `playlist-item ${isCurrent ? 'active' : ''}`;
     item.style.cursor = 'pointer';
-    item.onclick = () => {
+    item.setAttribute('role', 'button');
+    item.setAttribute('tabindex', '0');
+    
+    const playTrackAction = () => {
       hasUserStartedPlay = true;
       fetch('/api/control', {
         method: 'POST',
@@ -283,15 +343,23 @@ function renderPlaylistTable() {
       .then(data => {
         if (data.track) {
           handleServerSync(data);
-          audio.play().catch(() => {});
+          safePlay();
         }
       })
       .catch(console.error);
     };
 
+    item.onclick = playTrackAction;
+    item.onkeydown = (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        playTrackAction();
+      }
+    };
+
     item.innerHTML = `
       <div class="playlist-track-info">
-        <span class="playlist-track-index">${isCurrent ? '▶' : (i + 1)}</span>
+        <span class="playlist-track-index" aria-hidden="true">${isCurrent ? '▶' : (i + 1)}</span>
         <div>
           <div class="playlist-track-title">${t.title} ${isCurrent ? '<span style="font-size:0.68rem;color:var(--gold-accent);margin-left:0.35rem;font-weight:800;">(PLAYING NOW)</span>' : ''}</div>
           <div class="playlist-track-artist">${t.artist}</div>
@@ -304,18 +372,23 @@ function renderPlaylistTable() {
 }
 
 // --- DAY / NIGHT THEME SYSTEM --------------------------------
-const SUN_ICON = `<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12 7c-2.76 0-5 2.24-5 5s2.24 5 5 5 5-2.24 5-5-2.24-5-5-5zM2 13h2c.55 0 1-.45 1-1s-.45-1-1-1H2c-.55 0-1 .45-1 1s.45 1 1 1zm18 0h2c.55 0 1-.45 1-1s-.45-1-1-1h-2c-.55 0-1 .45-1 1s.45 1 1 1zM11 2v2c0 .55.45 1 1 1s1-.45 1-1V2c0-.55-.45-1-1-1s-1 .45-1 1zm0 18v2c0 .55.45 1 1 1s1-.45 1-1v-2c0-.55-.45-1-1-1s-1 .45-1 1zM5.99 4.58c-.39-.39-1.03-.39-1.41 0s-.39 1.03 0 1.41l1.06 1.06c.39.39 1.03.39 1.41 0s.39-1.03 0-1.41L5.99 4.58zm12.37 12.37c-.39-.39-1.03-.39-1.41 0s-.39 1.03 0 1.41l1.06 1.06c.39.39 1.03.39 1.41 0s.39-1.03 0-1.41l-1.06-1.06zm1.06-12.37l-1.06 1.06c-.39.39-.39 1.03 0 1.41s1.03.39 1.41 0l1.06-1.06c.39-.39.39-1.03 0-1.41s-1.03-.39-1.41 0zm-12.37 12.37l-1.06 1.06c-.39.39-.39 1.03 0 1.41s1.03.39 1.41 0l1.06-1.06c.39-.39.39-1.03 0-1.41s-1.03-.39-1.41 0z"/></svg>`;
+const SUN_ICON = `<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true"><path d="M12 7c-2.76 0-5 2.24-5 5s2.24 5 5 5 5-2.24 5-5-2.24-5-5-5zM2 13h2c.55 0 1-.45 1-1s-.45-1-1-1H2c-.55 0-1 .45-1 1s.45 1 1 1zm18 0h2c.55 0 1-.45 1-1s-.45-1-1-1h-2c-.55 0-1 .45-1 1s.45 1 1 1zM11 2v2c0 .55.45 1 1 1s1-.45 1-1V2c0-.55-.45-1-1-1s-1 .45-1 1zm0 18v2c0 .55.45 1 1 1s1-.45 1-1v-2c0-.55-.45-1-1-1s-1 .45-1 1zM5.99 4.58c-.39-.39-1.03-.39-1.41 0s-.39 1.03 0 1.41l1.06 1.06c.39.39 1.03.39 1.41 0s.39-1.03 0-1.41L5.99 4.58zm12.37 12.37c-.39-.39-1.03-.39-1.41 0s-.39 1.03 0 1.41l1.06 1.06c.39.39 1.03.39 1.41 0s.39-1.03 0-1.41l-1.06-1.06zm1.06-12.37l-1.06 1.06c-.39.39-.39 1.03 0 1.41s1.03.39 1.41 0l1.06-1.06c.39-.39.39-1.03 0-1.41s-1.03-.39-1.41 0zm-12.37 12.37l-1.06 1.06c-.39.39-.39 1.03 0 1.41s1.03.39 1.41 0l1.06-1.06c.39-.39.39-1.03 0-1.41s-1.03-.39-1.41 0z"/></svg>`;
 
-const MOON_ICON = `<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12.3 2a10 10 0 0 0-1.9 20 10 10 0 0 0 9.6-7 1 1 0 0 0-1.2-1.2 8 8 0 1 1-8.5-10.6 1 1 0 0 0-1-1.2z"/></svg>`;
+const MOON_ICON = `<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true"><path d="M12.3 2a10 10 0 0 0-1.9 20 10 10 0 0 0 9.6-7 1 1 0 0 0-1.2-1.2 8 8 0 1 1-8.5-10.6 1 1 0 0 0-1-1.2z"/></svg>`;
 
 function getAutoTheme() {
+  const saved = localStorage.getItem('sg_theme');
+  if (saved) return saved;
   const now = new Date();
   const mins = now.getHours() * 60 + now.getMinutes();
   return (mins >= 360 && mins < 1110) ? 'day' : 'night';
 }
 
 function applyTheme(theme) {
+  document.documentElement.setAttribute('data-theme', theme);
   document.body.setAttribute('data-theme', theme);
+  localStorage.setItem('sg_theme', theme);
+
   const labelEl = document.getElementById('theme-toggle-label');
   const iconEl = document.getElementById('theme-toggle-icon');
   
@@ -326,17 +399,38 @@ function applyTheme(theme) {
 const themeBtn = document.getElementById('theme-toggle-btn');
 if (themeBtn) {
   themeBtn.addEventListener('click', () => {
-    const current = document.body.getAttribute('data-theme') || getAutoTheme();
+    const current = document.documentElement.getAttribute('data-theme') || getAutoTheme();
     applyTheme(current === 'day' ? 'night' : 'day');
   });
 }
 
-// Accordion FAQ Setup
-document.querySelectorAll('.faq-question').forEach(q => {
-  q.addEventListener('click', () => {
-    const parent = q.parentElement;
-    parent.classList.toggle('active');
+// Accordion FAQ Setup with ARIA
+document.querySelectorAll('.faq-question').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const parent = btn.parentElement;
+    const isActive = parent.classList.toggle('active');
+    btn.setAttribute('aria-expanded', isActive);
   });
+});
+
+// Keyboard Accessibility Shortcuts
+document.addEventListener('keydown', (e) => {
+  // Ignore if user is typing in an input
+  if (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName)) return;
+
+  if (e.code === 'Space') {
+    e.preventDefault();
+    togglePlayPause();
+  } else if (e.code === 'ArrowRight') {
+    e.preventDefault();
+    triggerTrackChange(isShuffle ? 'shuffle' : 'next');
+  } else if (e.code === 'ArrowLeft') {
+    e.preventDefault();
+    triggerTrackChange(isShuffle ? 'shuffle' : 'prev');
+  } else if (e.code === 'KeyM') {
+    e.preventDefault();
+    audio.muted = !audio.muted;
+  }
 });
 
 // Initialize Engine

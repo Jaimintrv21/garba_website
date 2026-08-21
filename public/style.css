@@ -325,10 +325,15 @@ body {
   transition: opacity 0.8s var(--ease);
 }
 
-.hero-bg-day { background-image: url('/images/day.jpg'); opacity: 0; }
-.hero-bg-night { background-image: url('/images/night.jpg'); opacity: 1; }
+.hero-bg-day { background-image: url('/images/day.webp'), url('/images/day.jpg'); opacity: 0; }
+.hero-bg-night { background-image: url('/images/night.webp'), url('/images/night.jpg'); opacity: 1; }
 
+:root[data-theme="day"] .hero-bg-day,
+html[data-theme="day"] .hero-bg-day,
 body[data-theme="day"] .hero-bg-day { opacity: 1; }
+
+:root[data-theme="day"] .hero-bg-night,
+html[data-theme="day"] .hero-bg-night,
 body[data-theme="day"] .hero-bg-night { opacity: 0; }
 
 .hero-overlay {
@@ -612,3 +617,62 @@ footer {
   text-align: center; font-size: 0.82rem; color: var(--text-muted);
 }
 footer a { color: var(--gold-accent); text-decoration: none; }
+
+/* ── Focus Visible & Accessibility Outlines ── */
+a:focus-visible, button:focus-visible, [role="button"]:focus-visible {
+  outline: 2px solid var(--gold-accent);
+  outline-offset: 3px;
+  border-radius: 8px;
+}
+
+/* ── Autoplay Gesture Prompt Toast ── */
+.autoplay-prompt-toast {
+  position: fixed;
+  bottom: calc(1.5rem + var(--safe-bottom));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 300;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.65rem 1.25rem;
+  border-radius: 100px;
+  background: rgba(255, 130, 10, 0.95);
+  color: #090206;
+  font-weight: 800;
+  font-size: 0.85rem;
+  box-shadow: 0 10px 30px rgba(255, 128, 8, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  backdrop-filter: blur(16px);
+  animation: promptBounce 1.5s infinite alternate var(--ease);
+}
+
+.autoplay-join-btn {
+  background: #090206;
+  color: var(--gold-accent);
+  border: none;
+  padding: 0.35rem 0.85rem;
+  border-radius: 100px;
+  font-weight: 800;
+  font-size: 0.78rem;
+  cursor: pointer;
+  transition: transform 0.2s var(--ease);
+}
+
+.autoplay-join-btn:hover {
+  transform: scale(1.05);
+}
+
+@keyframes promptBounce {
+  0% { transform: translateX(-50%) translateY(0); }
+  100% { transform: translateX(-50%) translateY(-6px); }
+}
+
+/* ── Prefers Reduced Motion ── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

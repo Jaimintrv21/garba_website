@@ -61,6 +61,11 @@ let radioState = {
 let sseClients = [];
 let activeSessions = new Map();
 
+function getCurrentElapsed() {
+  if (!radioState.isPlaying) return 0;
+  return (Date.now() - radioState.trackStartedAt) / 1000;
+}
+
 function getFullState() {
   const currentTrack = PLAYLIST[radioState.currentTrackIndex];
   const nextTrack = PLAYLIST[(radioState.currentTrackIndex + 1) % PLAYLIST.length];
